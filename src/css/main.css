@@ -1,0 +1,74 @@
+:root{
+    --classic-green-bg:#006400;
+    --light-pink-bg: #d9d9d9;
+}
+
+body {
+    background: var(--classic-green-bg);
+    height: 100vh;
+    margin:0;
+}
+
+.game-container{
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto 1fr;
+    margin: 0 auto;
+    padding: 0;
+    background-color: var(--classic-green-bg);
+    height: 100vh;
+}
+
+@media screen and (min-width:1000px){
+    .game-container{
+        width:80%;
+    }
+}
+
+
+/* Upper row layout */
+.upper-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+}
+
+/* Lower row layout */
+.lower-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    align-items: flex-start; /* ensure cards start from top */
+}
+
+/* Individual slots - for foundation and tableau */
+.slot {
+    display: flex;
+    flex-direction: column; /* To help with card stacking order */
+    align-items: center;
+}
+
+/* .card {
+    width: 60px;
+    height: 90px;
+    margin-bottom: -55px;
+    position: relative;
+} */
+
+.card.back.deck, .card.medium.back.deck{
+    margin-bottom: -89.8px; /* more specific overlapping effect for the deck for medium(default) card size */
+}
+.card.large.back.deck{
+    margin-bottom: -146px; /* more specific overlapping effect for the deck for large card size */
+}
+
+.card:nth-child(n) {
+    z-index: n; /* Ensure each card is stacked properly */
+}
+
+.card.face-up {
+    z-index: 2; /* Ensure face up cards are above face down */
+}
+
+
+
