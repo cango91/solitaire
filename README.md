@@ -1,3 +1,3 @@
 # Solitaire (Klondike Version)
 
-[/docs/readme.md](wireframe and pseudocode)
+[wireframe and pesudo-code](./docs/readme.md)
