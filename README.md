@@ -1,2 +1,3 @@
-# solitaire
-Solitaire in browser (html, css, js)
+# Solitaire (Klondike Version)
+
+
