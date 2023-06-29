@@ -8,7 +8,7 @@
 + Single-draw difficulty
 + Bacground music
 ## Features for Future
-Below are not expected to be finished by MVP, but will be solid additions if time allows:
+Below features are not expected to be finished by MVP, but will be solid additions if time allows, in no particular order (except first one):
 + 2 and 3-draw difficulties
 + Different layout options for mobile device portrait and landscape orientations
 + Sound effects
