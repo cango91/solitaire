@@ -102,39 +102,70 @@ body {
 .slot {
     display: flex;
     flex-direction: column;
-    /* To help with card stacking order */
-    align-items: center;
+    justify-content: flex-start;
     background-image: none;
-    background-color: var(--light-pink-bg);  /*rgba(195, 195, 195, 0.5); */
+    background-color: var(--light-pink-bg); 
     border: 0.15em dashed #245A11;
-    background-position: center center;
     width: 4.0em;
     height: 5.5em;
-
 }
 
+.slot.foundation{
+    display: block;
+}
+
+.slot.foundation .card{
+    position: absolute;
+}
+.slot.foundation:hover .card:last-child{
+    box-shadow: .25rem .25rem 0.35rem var(--icon-stroke); 
+    transform: translateY(15px);
+}
 
 .slot.large{ font-size: 26px;}
 
-.card.back.deck {
-    margin-bottom: -89.8px;
-    /* more specific overlapping effect for the deck for medium(default) card size */
+.tableau{
+    flex-direction: column-reverse;
 }
 
+.card.large.back.deck:last-child:hover{
+    box-shadow: .25rem .25rem 0.35rem var(--icon-stroke); 
+    margin-bottom: -10px;
+}
+
+.card.large.on-tableau{
+    margin-top: -170px;
+    position: relative !important;
+    flex-shrink: auto;
+
+}
+
+.card.large.on-tableau:not(.back):hover{
+    margin-left: -10px;
+    box-shadow: .25rem .25rem 0.35rem var(--icon-stroke); 
+
+}
+
+.card.large.on-tableau.back{
+    margin-top: -155px;
+}
+
+.card.back.deck {
+    margin-bottom: -89.8px;
+    /* specific overlapping effect for the deck for medium(default) card size.. These seem to be magic numbers, change at own peril */
+}
 
 .card.large.back.deck {
     margin-bottom: -146px;
-    /* more specific overlapping effect for the deck for large card size */
+    /* specific overlapping effect for the deck for large card size */
 }
 
 .card:nth-child(n) {
-    z-index: n;
-    /* Ensure each card is stacked properly */
+    z-index: calc(100-n);
 }
 
 .card.face-up {
     z-index: 2;
-    /* Ensure face up cards are above face down */
 }
 
 .header, .footer{
