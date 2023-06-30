@@ -1,6 +1,7 @@
 :root {
     --classic-green-bg: #006400;
     --light-pink-bg: #d9d9d9;
+
     --light-green: #5ba94b;
 
     --icon-base: #f8ebcd;
@@ -23,7 +24,7 @@
     --button-border:whitesmoke;
 
     --drag-border-size:3px;
-
+    font-family:'Courier New', Courier, monospace;
 }
 
 button{
@@ -33,6 +34,7 @@ button{
     outline: none;
     padding: 1vmin 3vmin;
     color: var(--icon-stroke);
+    margin-left: 5px;
 }
 
 button:hover{
@@ -78,6 +80,9 @@ body {
         width: 80%;
         margin: 0 auto;
         padding: 0 55px;
+    }
+    button{
+        margin-left: 0;
     }
 }
 
@@ -305,6 +310,23 @@ body {
 
 .fill-inside-bg{
     fill: var(--icon-base);
+}
+
+.message-box{
+    display: none;
+    position: absolute;
+    bottom: 10px;
+    color: black;
+    background-image: linear-gradient(to bottom, var(--light-pink-bg), transparent);
+    width: 50vw;
+    height: 30vh;
+    border-radius: 5vmin;
+    text-align: center;
+    left: 25vw;
+}
+
+.message-box.show{
+    display: block;
 }
 
 .overlay{
