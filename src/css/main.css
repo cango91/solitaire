@@ -1,27 +1,30 @@
-:root{
-    --classic-green-bg:#006400;
+:root {
+    --classic-green-bg: #006400;
     --light-pink-bg: #d9d9d9;
 }
 
 body {
-    background: var(--classic-green-bg);
+    background: var(--light-pink-bg);
     height: 100vh;
-    margin:0;
+    margin: 0;
 }
 
-.game-container{
+.game-container {
     display: grid;
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto 1fr;
-    margin: 0 auto;
+    grid-template-rows: auto auto 1fr auto;
+    margin: 0;
     padding: 0;
     background-color: var(--classic-green-bg);
     height: 100vh;
+    width: 100vw;
 }
 
-@media screen and (min-width:1000px){
-    .game-container{
-        width:80%;
+@media screen and (min-width:1000px) {
+    .game-container {
+        width: 80%;
+        margin: 0 auto;
+        padding: 0 55px;
     }
 }
 
@@ -38,15 +41,28 @@ body {
     display: flex;
     justify-content: space-between;
     padding: 10px;
-    align-items: flex-start; /* ensure cards start from top */
+    align-items: flex-start;
+    /* ensure cards start from top */
 }
 
 /* Individual slots - for foundation and tableau */
 .slot {
     display: flex;
-    flex-direction: column; /* To help with card stacking order */
+    flex-direction: column;
+    /* To help with card stacking order */
     align-items: center;
+    background-image: none;
+    background-color: var(--light-pink-bg);  /*rgba(195, 195, 195, 0.5); */
+    border: 0.15em dashed #245A11;
+    background-position: center center;
+    width: 4.0em;
+    height: 5.5em;
+
 }
+
+
+.slot.large{ font-size: 26px;}
+
 
 /* .card {
     width: 60px;
@@ -55,20 +71,96 @@ body {
     position: relative;
 } */
 
-.card.back.deck, .card.medium.back.deck{
-    margin-bottom: -89.8px; /* more specific overlapping effect for the deck for medium(default) card size */
+.card.back.deck {
+    margin-bottom: -89.8px;
+    /* more specific overlapping effect for the deck for medium(default) card size */
 }
-.card.large.back.deck{
-    margin-bottom: -146px; /* more specific overlapping effect for the deck for large card size */
+
+.card.large.back.deck {
+    margin-bottom: -146px;
+    /* more specific overlapping effect for the deck for large card size */
 }
 
 .card:nth-child(n) {
-    z-index: n; /* Ensure each card is stacked properly */
+    z-index: n;
+    /* Ensure each card is stacked properly */
 }
 
 .card.face-up {
-    z-index: 2; /* Ensure face up cards are above face down */
+    z-index: 2;
+    /* Ensure face up cards are above face down */
 }
 
+.header, .footer{
+    height:100px;
+    display:flex;
+    justify-items: flex-start;
+}
 
+.header{
+    flex-direction: row-reverse;
+}
 
+.header > div:last-child{
+    margin-right: auto;
+}
+
+.icon{
+    padding: 10px 5px;
+    margin-left: 5px;
+}
+
+.icon:not(.disabled):hover{
+    cursor: pointer;
+}
+
+.icon svg{
+    width: 35px;
+    height: 35px;
+}
+
+.icon-settings{
+    fill:none;
+    stroke-width: 1;
+    border: 2px solid antiquewhite;
+    border-radius: 50%;
+}
+
+.icon-settings:is(svg){
+    box-sizing: content-box;
+    width: 22px;
+    height: 22px;
+    padding: 5px 5px;
+}
+
+.icon-settings circle{
+    fill: var(--light-pink-bg);
+}
+
+.icon-settings path{
+    fill: #88939e;
+}
+
+.icon-settings:hover {
+    stroke-width: 1.5;
+}
+
+.icon-settings:active path{
+    fill: #778899;
+}
+
+.icon-about{
+    fill:antiquewhite;
+    /* background: #94cfff; */
+    background-image: radial-gradient(farthest-corner, #94cfff, transparent 70%);
+    border-radius: 50%;
+}
+
+.icon-about:hover{
+    background: none;
+    background-image: radial-gradient(circle at center, #94cfff, transparent 70%);
+}
+
+.icon-about:active{
+    fill: #d9d9d9;
+}
