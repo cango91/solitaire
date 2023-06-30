@@ -22,6 +22,8 @@
     --button-bg:#6AA2BD;
     --button-border:whitesmoke;
 
+    --drag-border-size:3px;
+
 }
 
 button{
@@ -129,6 +131,7 @@ body {
 
 .card{
     margin-left: 0;
+    transition: all 0.2s;
 }
 
 .card:first-child{
@@ -143,14 +146,12 @@ body {
 .card.large.on-tableau{
     margin-top: -170px;
     position: relative !important;
-    flex-shrink: auto;
-
 }
 
 .card.large.on-tableau:not(.back):hover{
-    margin-left: -10px;
+    /* margin-left: -10px; */
+    transform: translateX(-10px);
     box-shadow: .25rem .25rem 0.35rem var(--icon-stroke); 
-
 }
 
 .card.large.on-tableau.back{
@@ -158,9 +159,24 @@ body {
     margin-bottom: 0;
 }
 
+.card.large.on-waste{
+    margin-bottom: calc(-5.5em * 0.9);
+    position: relative;
+}
+
+.card.large.on-waste:not(:only-child):hover{
+    margin-left: -15px;
+}
+
+.card.card.large.on-waste:last-child:hover{
+    box-shadow: .25rem .25rem 0.35rem var(--icon-stroke); 
+}
+
+
+
+
 .card.back.deck {
     margin-bottom: -89.8px;
-    /* specific overlapping effect for the deck for medium(default) card size.. These seem to be magic numbers, change at own peril */
 }
 
 .card.large.back.deck {
@@ -181,6 +197,23 @@ body {
     display:flex;
     justify-items: flex-start;
     align-items: center;
+}
+
+.card.dragged{
+    border-left: var(--drag-border-size) solid var(--icon-highlight);
+    border-right: var(--drag-border-size) solid var(--icon-highlight);
+}
+
+.card.dragged.pile-head{
+    border-top: var(--drag-border-size) solid var(--icon-highlight);
+}
+
+.card.dragged.pile-end{
+    border-bottom: var(--drag-border-size) solid var(--icon-highlight);
+}
+
+.card.dragged:not(.card.dragged.pile-head){
+    transform: translateX(-10px);
 }
 
 .header{
