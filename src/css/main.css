@@ -350,7 +350,7 @@ body {
     transition: opacity 0.3s ease-in-out;
 }
 
-.popup{
+.popup {
     z-index: 1500;
     border-radius: 5vmin;
     background-color: var(--classic-green-bg);
@@ -374,4 +374,45 @@ body {
     display: block;
     opacity: 1;
     transition: opacity 0.3s ease-in-out;
+}
+
+
+.card.flipping-first-half {
+    animation: flip-1 0.25s ease-in-out;
+}
+
+.card.flipping-second-half{
+    animation: flip-2 0.25s ease-in-out;
+    
+}
+/* 
+.card.flipping{
+    animation: flip 0.5s ease-in-out;
+}
+@keyframes flip{
+    from {
+        transform:rotateY(180deg);
+    }
+    to {
+        transform:rotateY(0deg);
+    }
+} 
+*/
+
+@keyframes flip-1 {
+    from {
+        transform:rotateY(0deg);
+    }
+    to {
+        transform:rotateY(90deg);
+    }
+}
+
+@keyframes flip-2 {
+    from {
+        transform:rotateY(-90deg);
+    }
+    to {
+        transform:rotateY(0deg);
+    }
 }
