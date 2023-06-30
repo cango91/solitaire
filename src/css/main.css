@@ -1,12 +1,64 @@
+
+/*TODO: Clean up variables once color scheme looks good*/
 :root {
     --classic-green-bg: #006400;
     --light-pink-bg: #d9d9d9;
+    --light-green: #5ba94b;
+
+    --icon-base: #f8ebcd;
+    --icon-highlight: #ffcd66;
+    --icon-stroke: #917c55;
+
+    --options-icon-fill: #24693D;
+    --options-icon-hover-fill:#398A5E;
+    --options-icon-active-fill:#306C4B;
+
+    --undo-icon-fill: #54A77B;
+    --undo-icon-hover-fill:#3D8061;
+    --undo-icon-active-fill:#3B6A44;
+
+    --about-icon-fill:#7BD3A4;
+    --about-icon-hover-fill:#5CBE8E;
+    --about-icon-active-fill:#669D76;
+
+    --button-bg:#6AA2BD;
+    --button-border:whitesmoke;
+
+}
+
+button{
+    background-color: var(--icon-base);
+    border: 0.5vmin solid var(--icon-stroke);
+    border-radius: 1vmin;
+    outline: none;
+    padding: 1vmin 3vmin;
+    color: var(--icon-stroke);
+}
+
+button:hover{
+    background-color: var(--icon-stroke);
+    border-color: var(--icon-base);
+    color:white;
+    box-shadow: .25rem .25rem 0.35rem var(--icon-stroke);
+    filter: drop-shadow(.25rem .25rem 0.35rem var(--icon-stroke));
+    cursor: pointer;
+}
+button:active{
+    background-color: var(--icon-base);
+    border-color: var(--icon-stroke);
+    color:var(--icon-stroke);
+    box-shadow: none;
+    filter: none;
 }
 
 body {
     background: var(--light-pink-bg);
     height: 100vh;
     margin: 0;
+}
+
+.blur{
+    filter: blur(0.5em);
 }
 
 .game-container {
@@ -16,6 +68,7 @@ body {
     margin: 0;
     padding: 0;
     background-color: var(--classic-green-bg);
+    background-image: linear-gradient(var(--classic-green-bg),var(--light-green));
     height: 100vh;
     width: 100vw;
 }
@@ -40,7 +93,7 @@ body {
 .lower-row {
     display: flex;
     justify-content: space-between;
-    padding: 10px;
+    padding: 50px 10px;
     align-items: flex-start;
     /* ensure cards start from top */
 }
@@ -63,18 +116,11 @@ body {
 
 .slot.large{ font-size: 26px;}
 
-
-/* .card {
-    width: 60px;
-    height: 90px;
-    margin-bottom: -55px;
-    position: relative;
-} */
-
 .card.back.deck {
     margin-bottom: -89.8px;
     /* more specific overlapping effect for the deck for medium(default) card size */
 }
+
 
 .card.large.back.deck {
     margin-bottom: -146px;
@@ -95,6 +141,7 @@ body {
     height:100px;
     display:flex;
     justify-items: flex-start;
+    align-items: center;
 }
 
 .header{
@@ -117,50 +164,84 @@ body {
 .icon svg{
     width: 35px;
     height: 35px;
+    border: 2px solid var(--icon-stroke);
+    /* border: 2px solid var(--icon-base); */
+    border-radius: 50%;
+    padding: 3px;
+    background: radial-gradient(circle, var(--icon-base) 30%, var(--icon-highlight) 100%);
 }
 
-.icon-settings{
-    fill:none;
+.icon:hover svg{
+    filter:drop-shadow(.15rem .15rem 0.35rem var(--icon-stroke));
+}
+
+.icon:active svg{
+    filter:none;
+}
+
+.about-icon{
+    stroke: var(--icon-stroke);
     stroke-width: 1;
-    border: 2px solid antiquewhite;
-    border-radius: 50%;
 }
 
-.icon-settings:is(svg){
-    box-sizing: content-box;
-    width: 22px;
-    height: 22px;
-    padding: 5px 5px;
+.about-icon path{
+    fill: var(--about-icon-fill);
+}
+.about-icon:hover path{
+    fill: var(--about-icon-hover-fill);
+}
+.about-icon:active path{
+    fill: var(--about-icon-active-fill);
 }
 
-.icon-settings circle{
-    fill: var(--light-pink-bg);
+.undo-icon{
+    stroke-width: 20;
+    stroke: var(--icon-stroke);
 }
 
-.icon-settings path{
-    fill: #88939e;
+.undo-icon path{
+    fill:var(--undo-icon-fill);
 }
 
-.icon-settings:hover {
-    stroke-width: 1.5;
+.undo-icon:hover path{
+    fill:var(--undo-icon-hover-fill);    
 }
 
-.icon-settings:active path{
-    fill: #778899;
+.undo-icon:active path{
+    fill:var(--undo-icon-active-fill);    
 }
 
-.icon-about{
-    fill:antiquewhite;
-    /* background: #94cfff; */
-    background-image: radial-gradient(farthest-corner, #94cfff, transparent 70%);
-    border-radius: 50%;
+.options-icon{
+    stroke-width: 1;
+    stroke: var(--icon-stroke);
 }
 
-.icon-about:hover{
-    background: none;
-    background-image: radial-gradient(circle at center, #94cfff, transparent 70%);
+.options-icon path{
+    fill: var(--options-icon-fill);
 }
 
-.icon-about:active{
-    fill: #d9d9d9;
+.options-icon:hover path{
+    fill: var(--options-icon-hover-fill);
+}
+
+.options-icon:active path{
+    fill: var(--options-icon-active-fill);
+}
+
+
+
+.fill-inside{
+    fill: var(--icon-base);
+}
+
+.fill-inside-bg{
+    fill: var(--icon-base);
+}
+
+.overlay{
+    display:none;
+}
+
+.overlay.show{
+    display: block;
 }
