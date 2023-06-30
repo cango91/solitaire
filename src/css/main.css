@@ -1,5 +1,3 @@
-
-/*TODO: Clean up variables once color scheme looks good*/
 :root {
     --classic-green-bg: #006400;
     --light-pink-bg: #d9d9d9;
@@ -95,7 +93,6 @@ body {
     justify-content: space-between;
     padding: 50px 10px;
     align-items: flex-start;
-    /* ensure cards start from top */
 }
 
 /* Individual slots - for foundation and tableau */
@@ -104,7 +101,7 @@ body {
     flex-direction: column;
     justify-content: flex-start;
     background-image: none;
-    background-color: var(--light-pink-bg); 
+    padding: 0;
     border: 0.15em dashed #245A11;
     width: 4.0em;
     height: 5.5em;
@@ -116,10 +113,11 @@ body {
 
 .slot.foundation .card{
     position: absolute;
+    margin-top: 0;
 }
 .slot.foundation:hover .card:last-child{
-    box-shadow: .25rem .25rem 0.35rem var(--icon-stroke); 
-    transform: translateY(15px);
+    box-shadow: -.25rem .0 0.35rem var(--icon-stroke); 
+    transform: translate(15px,5px);
 }
 
 .slot.large{ font-size: 26px;}
@@ -128,9 +126,18 @@ body {
     flex-direction: column-reverse;
 }
 
-.card.large.back.deck:last-child:hover{
-    box-shadow: .25rem .25rem 0.35rem var(--icon-stroke); 
-    margin-bottom: -10px;
+
+.card{
+    margin-left: 0;
+}
+
+.card:first-child{
+    margin-top: 0;
+}
+
+#deck-slot:hover .card:last-child{
+    box-shadow: -.25rem .25rem 0.35rem var(--icon-stroke); 
+    transform: translate(15px,-5px);
 }
 
 .card.large.on-tableau{
@@ -148,6 +155,7 @@ body {
 
 .card.large.on-tableau.back{
     margin-top: -155px;
+    margin-bottom: 0;
 }
 
 .card.back.deck {
@@ -156,8 +164,8 @@ body {
 }
 
 .card.large.back.deck {
-    margin-bottom: -146px;
-    /* specific overlapping effect for the deck for large card size */
+    /* margin-bottom: -146px; */
+    margin-bottom: calc(-5.5em * 1.025);
 }
 
 .card:nth-child(n) {
@@ -196,7 +204,6 @@ body {
     width: 35px;
     height: 35px;
     border: 2px solid var(--icon-stroke);
-    /* border: 2px solid var(--icon-base); */
     border-radius: 50%;
     padding: 3px;
     background: radial-gradient(circle, var(--icon-base) 30%, var(--icon-highlight) 100%);
@@ -258,8 +265,6 @@ body {
 .options-icon:active path{
     fill: var(--options-icon-active-fill);
 }
-
-
 
 .fill-inside{
     fill: var(--icon-base);
