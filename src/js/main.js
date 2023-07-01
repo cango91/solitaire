@@ -1,13 +1,16 @@
 
-import Card, {Suit} from './card.js';
+// import Card, {Suit} from './card.js';
+import Card from './modules/card.js';
+import SUITS from './modules/suits.js'
 
 /* DEBUGGING TOOLS */
 window.ConsoleObject = {}
+window.ConsoleObject.SUITS = SUITS;
 window.ConsoleObject.Card = Card;
-window.ConsoleObject.Suit = Suit;
-window.ConsoleObject.makeCard = function (arg){
-    return new Card(arg);
-}
+// window.ConsoleObject.Suit = Suit;
+// window.ConsoleObject.makeCard = function (arg){
+//     return new Card(arg);
+// }
 window.ConsoleObject.tryFlipping = function (card, cardClass, oldClass = 'back') {
     card.classList.add('flipping-first-half');
     setTimeout(function () {
