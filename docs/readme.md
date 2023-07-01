@@ -15,6 +15,7 @@ Below features are not expected to be finished by MVP, but will be solid additio
 + Timer-mode
 + Microsoft style scoring system
 + Undo history (a.k.a thoughtful solitaire)
++ Save and Load games -> Trivial with command pattern if Undo history is implemented
 ## Pseudo-code
 ```javascript
 /*
@@ -29,16 +30,29 @@ class Card {
     // Static methods will provide comparing functionality
     // Will hold the necessary information for a card, i.e. face up/down, value, suite
     // flip(){}
-    // dragDrop(){} //(?)
     // Render method
+    // Sub-render methods responsible for manipulating DOM elements and animations -> remove from owning slot, create in the new owning slot. Or is this better suited for the Pile class?
+}
+
+class Command {
+    // Class for representing game actions to enable undo mechanics.
+    // Agnostic to validity of a move within games' context, it is the creating classes responsiblity to ensure a stored move is valid
+    // Fields: Action, Inverse (if null->Non-undoable action-> i.e. shuffle and deal which should only be done when beginning a new game, doesn't make sense to have these undoable as that would mean beginning a new game)
 }
 
 class Deck {
     // Empty constructor will fill a deck with 52 cards
-    // shuffle(){}
-    // remove(n) => remove n top-down cards (game difficulty)
+    // shuffle(){} => initial shuffle. non-reversible
+    // deal() => initial dealing of cards. non-reversible
+    // hit(n) => remove n top-down cards (game difficulty) - undoable
     // handleClick(){} //(?)
     // Render method(?)
+}
+
+class Pile{
+    // base class for Foundation, Waste, Tableau, Deck(?)
+    // main purpose is to have a common ancestor that stores a sequence of cards
+    // This would come in handy for dragging multiple cards as a "pile" as well
 }
 
 class Foundation{
@@ -55,15 +69,15 @@ class Waste{
 class Tableau{
     // Methods to check if can accept the card/s being dropped on it (reverse of foundation)
     // handleDrop(){}
-    // flitTopCard(){}
-    // Stores cards dropped on it (stack vs array?)
+    // flipTopCard(){}
+    // Stores cards dropped on it
     // Constructor takes index (0-6) to determine number of face-down cards on beginning
     // Render
 }
 
 class Solitaire{
     // Constructor creates Foundation, Deck, Tableau objects
-    // Fields to track game status
+    // Fields to track game status (and history)
     // handleDragDrop(){}
     // checkWinCondition(){}
     // render(){}
