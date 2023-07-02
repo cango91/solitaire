@@ -27,11 +27,8 @@ class GameOptions {
 }
 class Card {
     // Static fields will hold suite and color "coding"
-    // Static methods will provide comparing functionality
     // Will hold the necessary information for a card, i.e. face up/down, value, suite
     // flip(){}
-    // Render method
-    // Sub-render methods responsible for manipulating DOM elements and animations -> remove from owning slot, create in the new owning slot. Or is this better suited for the Pile class?
 }
 
 class Command {
@@ -52,7 +49,7 @@ class Deck {
 class Pile{
     // base class for Foundation, Waste, Tableau, Deck(?)
     // main purpose is to have a common ancestor that stores a sequence of cards
-    // This would come in handy for dragging multiple cards as a "pile" as well
+    // This would come in handy for dragging multiple cards as a "pile" as well?
 }
 
 class Foundation{

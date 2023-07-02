@@ -1,4 +1,4 @@
-/* CONSTANTS */
+/*---- CONSTANTS ----*/
 
 // Define the suits
 const SUITS = {
@@ -19,7 +19,7 @@ const FACE_VALUES = {
 /*---- CLASSES ----*/
 
 class Card {
-    constructor(value, suit) {
+    constructor(value, suit, faceUp = false) {
         // Check for valid value
         if (value < 1 || value > 13)
             throw new Error(`Invalid card value: ${value}`);
@@ -34,10 +34,10 @@ class Card {
 
         this.value = value;
         this.suit = SUITS[suit];
-        // this.faceValue = this.value > 0 && this.value < 10 ? this.value : FACE_VALUES[this.value];
+        this.faceUp = faceUp;
     }
 
-
+    // Static methods to create Card objects in different ways than the constructor, also to convert back
     static fromInteger(val) {
         if (val < 0 || val > 51)
             throw new Error(`To create Card from a single integer, value(${val}) must be between 0 and 51`);
@@ -49,7 +49,7 @@ class Card {
     }
 
     static fromCssClass(cssClass) {
-        let suit = cssClass.substring(0, 1).toUpperCase();
+        let suit = cssClass.substring(0, 1);
         let val = cssClass.substring(1);
         val = Number.isNaN(parseInt(val)) ? Object.keys(FACE_VALUES).find(key => FACE_VALUES[key] === val.toUpperCase()) : parseInt(val);
         return new Card(val, suit);
@@ -66,6 +66,10 @@ class Card {
 
     get cssClass() {
         return Card.toCssClass(this);
+    }
+
+    flip() {
+        this.faceUp = !this.faceUp;
     }
 }
 
