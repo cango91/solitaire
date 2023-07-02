@@ -10,6 +10,7 @@
 ## Features for Future
 Below features are not expected to be finished by MVP, but will be solid additions if time allows, in no particular order (except first one):
 + 2 and 3-draw difficulties
++ Fast-forward option for definite win condition, but not win-state
 + Different layout options for mobile device portrait and landscape orientations
 + Sound effects
 + Timer-mode
@@ -34,7 +35,19 @@ class Card {
 class Command {
     // Class for representing game actions to enable undo mechanics.
     // Agnostic to validity of a move within games' context, it is the creating classes responsiblity to ensure a stored move is valid
-    // Fields: Action, Inverse (if null->Non-undoable action-> i.e. shuffle and deal which should only be done when beginning a new game, doesn't make sense to have these undoable as that would mean beginning a new game)
+    // No fields, execute() and undo() methods (abstract)
+    // Derived classes (i.e. actual Commands) should return promises to consider UI changes taking time
+}
+
+class CommandHistory{
+    // Class to store Commands and enable undo/redo action
+    // Should work with promises to observe and wait for UI changes
+}
+
+class EventSystem{
+    // A class to separate DOM manipulation and animation concerns from game logic
+    // When a state change occurs through an action or command, they should notify the event system, which will call their registered listeners for DOM manipulation
+    // Singleton
 }
 
 class Deck {
@@ -42,34 +55,28 @@ class Deck {
     // shuffle(){} => initial shuffle. non-reversible
     // deal() => initial dealing of cards. non-reversible
     // hit(n) => remove n top-down cards (game difficulty) - undoable
-    // handleClick(){} //(?)
-    // Render method(?)
 }
 
 class Pile{
     // base class for Foundation, Waste, Tableau, Deck(?)
     // main purpose is to have a common ancestor that stores a sequence of cards
-    // This would come in handy for dragging multiple cards as a "pile" as well?
 }
 
 class Foundation{
     // Methods to check if can accept the card/s being dropped on it
-    // handleDrop(){}
-    // Render method
+
 }
 
 class Waste{
     // Waste pile
-    // render()
+
 }
 
 class Tableau{
     // Methods to check if can accept the card/s being dropped on it (reverse of foundation)
-    // handleDrop(){}
     // flipTopCard(){}
     // Stores cards dropped on it
     // Constructor takes index (0-6) to determine number of face-down cards on beginning
-    // Render
 }
 
 class Solitaire{
@@ -78,6 +85,7 @@ class Solitaire{
     // handleDragDrop(){}
     // checkWinCondition(){}
     // render(){}
+    // event listeners for DOM manipulations and animations
     // newGame(){}
 }
 // ----- INITIALIZATION ----- //

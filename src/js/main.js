@@ -18,6 +18,38 @@ const FACE_VALUES = {
 
 /*---- CLASSES ----*/
 
+// abstract class for undoable actions
+class Command{
+    execute(){
+        throw new Error("Method 'execute' must be implemented");
+    }
+    undo(){
+        throw new Error("Method 'undo' must be implemented");
+    }
+}
+
+// Singleton pattern
+class EventSystem {
+    constructor(){
+        if(EventSystem.instance){
+            return EventSystem.instance;
+        }
+        this.listeners = {};
+        EventSystem.instance = this;
+    }
+
+    listen(eventName, callback){
+        if(!this.listeners[eventName])
+            this.listeners[eventName] = [];
+        this.listeners[eventName].push(callback);
+    }
+
+    trigger(eventName, eventData){
+        if(this.listeners[eventName])
+            this.listeners[eventName].forEach(callback => callback(eventData));
+    }
+}
+
 class Card {
     constructor(value, suit, faceUp = false) {
         // Check for valid value
@@ -69,14 +101,64 @@ class Card {
     }
 
     flip() {
+        // this will be refactored to use Command and EventSystem
         this.faceUp = !this.faceUp;
     }
+}
+
+class Pile {
+    constructor(){
+        this.stack = [];
+    }
+
+    getTopCard(){
+        return this.stack.pop();
+    }
+
+    addCard(card){
+        this.stack.push(card);
+    }
+}
+
+class Deck extends Pile{
+    constructor(){
+        super();
+        // create 52 cards and store them
+        for(let i=0;i<52;i++){
+            this.addCard(Card.fromInteger(i));
+        }
+        this.isShuffled = false;
+    }
+
+    shuffle(){
+        let currentIndex = this.stack.length, tempValue, randomIndex;
+        while(currentIndex!==0){
+            randomIndex = Math.floor(Math.random()*currentIndex);
+            currentIndex--;
+            tempValue = this.stack[currentIndex];
+            this.stack[currentIndex] =this.stack[randomIndex];
+            this.stack[randomIndex] = tempValue;
+        }
+        this.isShuffled = true;
+    }
+
+    deal(tableaux){
+
+    }
+}
+
+
+
+//
+class HitCommand extends Command{
+
 }
 
 
 /* DEBUGGING */
 window.ConsoleObject = {};
 window.ConsoleObject.Card = Card;
+window.ConsoleObject.Deck = Deck;
 window.ConsoleObject.tryFlipping = function (card, cardClass, oldClass = 'back') {
     card.classList.add('flipping-first-half');
     setTimeout(function () {
@@ -90,9 +172,9 @@ window.ConsoleObject.tryFlipping = function (card, cardClass, oldClass = 'back')
     }, 250);
 }
 
-window.ConsoleObject.tryDealing = function (numTableau, speed = 2500, dealingFrom = '#deck-slot') { /* speed in px/sec */
+window.ConsoleObject.tryDealing = function (numTableau, speed = 2500, dealingFrom = '#deck-slot',_card=null) { /* speed in px/sec */
     // get top card from deck
-    const card = document.querySelector('.card.deck:last-child');
+    const card = _card ? _card : document.querySelector('.card.deck:last-child');
     const slot = document.querySelector(`${typeof numTableau === 'number' ? `#tableau-${numTableau}` : numTableau}`);
     const dealingSlot = document.querySelector(dealingFrom);
     let slotRect = slot.firstElementChild ? slot.lastElementChild.getBoundingClientRect() : slot.getBoundingClientRect();
