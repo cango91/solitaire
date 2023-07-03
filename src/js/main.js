@@ -59,11 +59,6 @@ class EventSystem {
             for (let callback of this.listeners[eventName]) {
                 callback(eventData);
             }
-        // if(this.listeners['all']){
-        //     for(let callback of this.listeners['any']){
-        //         callback(eventData);
-        //     }
-        // }
     }
 }
 
@@ -80,7 +75,7 @@ class CommandHistory {
         command.execute();
         this.history.push(command);
         this.undoStack = [];
-        new EventSystem().trigger('history-update',{ history: this.history,undo: this.undoStack})
+        new EventSystem().trigger('history-update', { history: this.history, undo: this.undoStack })
     }
 
     undo() {
@@ -88,7 +83,7 @@ class CommandHistory {
             let command = this.history.pop();
             command.undo();
             this.undoStack.push(command);
-            new EventSystem().trigger('history-update',{ history: this.history,undo: this.undoStack})
+            new EventSystem().trigger('history-update', { history: this.history, undo: this.undoStack })
         }
     }
 
@@ -97,7 +92,7 @@ class CommandHistory {
             let command = this.undoStack.pop();
             command.execute();
             this.history.push(command);
-            new EventSystem().trigger('history-update',{ history: this.history,undo: this.undoStack})
+            new EventSystem().trigger('history-update', { history: this.history, undo: this.undoStack })
         }
     }
 
@@ -191,6 +186,13 @@ class Foundation extends Pile {
 }
 
 class Waste extends Pile {
+    collect(deck) {
+        if (deck.length)
+            throw new Error(`Can't collect when deck's not empty!`);
+        if (!this.stack.length)
+            throw new Error(`No cards in waste pile to collect!`);
+        new CommandHistory().executeCommand(new CollectWastePile(this, deck));
+    }
 
 }
 
@@ -226,7 +228,7 @@ class Deck extends Pile {
             for (const tableau of t) {
                 tableau.addCard(this.removeTopCard());
                 // wait for the 'card-dealt' event to complete before moving to the next tableau
-                await new Promise(res => new EventSystem().trigger('card-dealt', { from: this,tableau: tableau, callback: res }));
+                await new Promise(res => new EventSystem().trigger('card-dealt', { from: this, tableau: tableau, callback: res }));
             }
             // flip the card at tableau i: doing so without invoking a Command here, because this part is undoable! Any flip action resulting from a user moving the cards and revealing a face-down top-card on a slot should invoke Command!
             const card = tableaux[i].topCard;
@@ -240,7 +242,7 @@ class Deck extends Pile {
         if (this.stack.length < 1)
             throw new Error(`Can't hit! No cards in deck left`);
         let numToRemove = Math.min(numHit, this.stack.length);
-        return new CommandHistory().executeCommand(new HitCommand(this,waste,numToRemove));
+        return new CommandHistory().executeCommand(new HitCommand(this, waste, numToRemove));
     }
 
 }
@@ -268,14 +270,14 @@ class FlipTopCardCommand extends Command {
 
 // Command to 'hit' card(s) from deck to waste pile
 class HitCommand extends Command {
-    constructor(deck,waste,numHit){
+    constructor(deck, waste, numHit) {
         super();
         this.deck = deck;
         this.waste = waste;
         this.numHit = numHit;
     }
 
-    async execute(){
+    async execute() {
         let numToRemove = this.numHit;
         while (numToRemove) {
             let card = this.deck.removeTopCard();
@@ -287,9 +289,9 @@ class HitCommand extends Command {
         }
     }
 
-    async undo(){
+    async undo() {
         let numToRemove = this.numHit;
-        while(numToRemove){
+        while (numToRemove) {
             let card = this.waste.removeTopCard();
             card.flip();
             this.deck.addCard(card);
@@ -302,7 +304,29 @@ class HitCommand extends Command {
 
 // Command to collect waste pile and turn back into deck
 class CollectWastePile extends Command {
+    constructor(waste, deck) {
+        super();
+        this.waste = waste;
+        this.deck = deck;
+    }
 
+    async execute() {
+        while (this.waste.stack.length) {
+            const card = this.waste.removeTopCard();
+            card.flip();
+            this.deck.addCard(card);
+        }
+        await new Promise(res => new EventSystem().trigger('waste-collected', { deck: this.deck, waste: this.waste, callback: res }));
+    }
+
+    async undo() {
+        while (this.deck.stack.length) {
+            const card = this.deck.removeTopCard();
+            card.flip();
+            this.waste.addCard(card);
+        }
+        await new Promise(res => new EventSystem().trigger('waste-collected', { deck: this.waste, waste: this.deck, callback: res }));
+    }
 }
 
 // Command to move one or more cards from a pile to another
@@ -330,6 +354,7 @@ class Solitaire {
         this.getTableauDOM = this.getTableauDOM.bind(this);
         this.getFoundationDOM = this.getFoundationDOM.bind(this);
         this.getPileDOM = this.getPileDOM.bind(this);
+        this.renderWasteCollected = this.renderWasteCollected.bind(this);
     }
 
     // initialize the DOM references, tableauxElements and foundationElements should be arrays that correspond to ltr order on the screen (leftmost should have index 0)
@@ -338,6 +363,7 @@ class Solitaire {
         // add listeners for animations
         this.eventSystem.listen('card-dealt', this.renderCardDealt);
         this.eventSystem.listen('top-card-flipped', this.renderFlipCard);
+        this.eventSystem.listen('waste-collected', this.renderWasteCollected);
     }
 
     newGame({ gameMode, difficulty }) {
@@ -383,9 +409,25 @@ class Solitaire {
     }
 
     async handleClickEvent(evt) {
+        if (!this.acceptInput) return;
         if (selfOrParentCheck(evt, '#deck-slot')) {
             if (this.deck.stack.length === 52) return this.beginGame();
-            return await this.deck.hit(this.difficulty,this.waste);
+            this.disableInput();
+            await this.deck.hit(this.difficulty, this.waste)
+                .catch(() => {
+                    // deck is empty, we should check for win state and pre-win conditions
+                    if (this.checkPreWinConditions()) {
+                        // enable fast-forward
+                    } else if (this.checkWinState()) {
+                        // fire off game-ended and game-won event
+                    } else {
+                        // collect pile and add it to deck (in reverse)
+                        this.waste.collect(this.deck);
+
+                    }
+                });
+            this.enableInput();
+            return;
         }
     }
 
@@ -395,6 +437,14 @@ class Solitaire {
 
     handleDropEvent(evt) {
 
+    }
+
+    checkWinState() {
+        return false;
+    }
+
+    checkPreWinConditions() {
+        return false;
     }
 
     getPileDOM(pile) {
@@ -425,6 +475,10 @@ class Solitaire {
         return this.DOM.foundationElements[this.foundations.findIndex(found => found === foundation)];
     }
 
+    getOnPileClassName(pile) {
+        return pile instanceof Tableau ? 'on-tableau' : pile instanceof Waste ? 'on-waste' : pile instanceof Foundation ? 'on-foundation' : pile instanceof Deck ? 'deck' : '';
+    }
+
     // animation functions.
     // A NOTE ON STYLE INCONSISTENY: 
     // I'd much prefer inconsistent styling here than explicit binding, which is VERY UGLY! ALSO VERY HARD TO DEBUG! SPENT HOURS BECAUSE I BOUND THE WRONG FUNCTION BY MISTAKE
@@ -433,7 +487,7 @@ class Solitaire {
         const cardEl = tableauEl.childElementCount > 1 ? tableauEl.querySelector('.card:last-child') : tableauEl.firstElementChild;
         let classToAdd, classToRemove;
         //if (cardEl.classList.contains('back')) {
-        if(card.faceUp){
+        if (card.faceUp) {
             // we're flipping card face-up
             classToAdd = card.cssClass;
             classToRemove = 'back';
@@ -444,15 +498,15 @@ class Solitaire {
         }
         // begin animation
         cardEl.classList.add('flipping-first-half');
-        setTimeout(function () {
+        setTimeout(() => {
             cardEl.classList.remove(classToRemove);
             cardEl.classList.remove('flipping-first-half');
             cardEl.classList.add(classToAdd);
             cardEl.classList.add('flipping-second-half')
-            setTimeout(function () {
+            setTimeout(() => {
                 cardEl.classList.remove('flipping-second-half');
                 callback();
-            }, FLIP_DURATION);
+            }, FLIP_DURATION / 2);
         }, FLIP_DURATION / 2);
     }
 
@@ -483,13 +537,70 @@ class Solitaire {
             fill: 'forwards'
         };
         const newCard = document.createElement('div');
-        let slotClass = tableau instanceof Tableau ? 'on-tableau' : tableau instanceof Waste ? 'on-waste' : tableau instanceof Foundation ? 'on-foundation' : 'deck' ;
+        //let slotClass = tableau instanceof Tableau ? 'on-tableau' : tableau instanceof Waste ? 'on-waste' : tableau instanceof Foundation ? 'on-foundation' : 'deck';
+        const slotClass = this.getOnPileClassName(tableau);
         newCard.classList.add('card', 'large', slotClass, 'back');
         card.animate(keyframes, options).onfinish = () => {
             source.removeChild(card);
             tableauElement.append(newCard);
             callback();
         };
+    }
+
+
+    async renderWasteCollected({ deck, waste, callback }) {
+        const source = this.getPileDOM(waste);
+        const target = this.getPileDOM(deck);
+        let sourceRect = source.getBoundingClientRect();
+        let targetRect = target.getBoundingClientRect();
+        let duration = 100
+        let options = {
+            duration,
+        }
+        let promiseCounter = 0;
+        let promises = [];
+        // flip all cards in one go       
+        if (!deck.stack[0].faceUp) {
+            // we're turning every cards back, we don't need to know their actual card values
+            for (const card of source.children) {
+                card.classList.add('flipping-first-half');
+            }
+            setTimeout(() => {
+                for (const card of source.children) {
+                    card.className = '';
+                    card.classList.add('card', 'large', 'back', 'flipping-second-half', this.getOnPileClassName(waste));
+                }
+                setTimeout(() => {
+                    for (const card of source.children) {
+                        card.classList.remove('flipping-second-half');
+                        // move as a whole to target
+                        let keyframes = [
+                            { transform: 'translate(0,0)' },
+                            { transform: `translate(${targetRect.left - sourceRect.left}px, ${targetRect.top - sourceRect.top}px)` }
+                        ]
+                        card.animate(keyframes, options).onfinish =()=> promises.push(new Promise(res => {
+                            card.classList.remove(this.getOnPileClassName(waste));
+                            card.classList.add(this.getOnPileClassName(deck));
+                            target.append(card);
+                            //source.removeChild(card);
+                            promiseCounter++;
+                            card.style.transform='translate(0,0);';
+                            card.style.display='inline';
+                            res();
+                        }));
+                    }
+                }, FLIP_DURATION / 2);
+            }, FLIP_DURATION / 2);
+
+        } else {
+            // we're undoing a wasteCollection, we need to know the id's of the cards
+        }
+        await Promise.all(promises).then(()=>{
+            console.log('calling');
+            callback();
+        })
+
+
     }
 
 
@@ -563,19 +674,19 @@ new EventSystem().listen('game-ended', () => {
     fadeInOutElement(msgbox);
     fadeInOutElement(newGameBtn);
     fadeInOutElement(icons.undo, false, 100);
-    fadeInOutElement(icons.redo,false,100);
+    fadeInOutElement(icons.redo, false, 100);
 })
 
-new EventSystem().listen('history-update', ({history,undo})=>{
-    if(history.length){
-        fadeInOutElement(icons.undo,true,100);
-    }else{
-        fadeInOutElement(icons.undo,false,100);
+new EventSystem().listen('history-update', ({ history, undo }) => {
+    if (history.length) {
+        fadeInOutElement(icons.undo, true, 100);
+    } else {
+        fadeInOutElement(icons.undo, false, 100);
     }
-    if(undo.length){
-        fadeInOutElement(icons.redo,true,100);
-    }else{
-        fadeInOutElement(icons.redo,false,100);
+    if (undo.length) {
+        fadeInOutElement(icons.redo, true, 100);
+    } else {
+        fadeInOutElement(icons.redo, false, 100);
     }
 })
 
@@ -591,11 +702,11 @@ gameArea.addEventListener('click', evt => {
     // console.log(evt.target);
     if (selfOrParentCheck(evt, '.icon')) {
         // we'll handle this here
-        if(selfOrParentCheck(evt,'#undo')){
-            if(solitaire.history.history.length)
+        if (selfOrParentCheck(evt, '#undo')) {
+            if (solitaire.history.history.length)
                 solitaire.history.undo();
-        }else if(selfOrParentCheck(evt,"#redo")){
-            if(solitaire.history.undoStack.length)
+        } else if (selfOrParentCheck(evt, "#redo")) {
+            if (solitaire.history.undoStack.length)
                 solitaire.history.redo();
         }
     } else if (selfOrParentCheck(evt, 'button')) {

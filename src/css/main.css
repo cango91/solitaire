@@ -166,7 +166,10 @@ body {
 .card:first-child {
     margin-top: 0;
 }
-
+#deck-slot:not(:has(:first-child)):hover{
+    cursor: pointer;
+    border-color: var(--icon-base);
+}
 #deck-slot:hover .card:last-child {
     box-shadow: -.25rem .25rem 0.35rem var(--icon-stroke);
     transform: translate(15px, -5px);

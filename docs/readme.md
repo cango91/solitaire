@@ -9,14 +9,16 @@
 + Bacground music
 ## Features for Future
 Below features are not expected to be finished by MVP, but will be solid additions if time allows, in no particular order (except first one):
-+ 2 and 3-draw difficulties
++ Game Options: 1 and 3-draw difficulties
 + Fast-forward option for definite win condition, but not win-state
 + Different layout options for mobile device portrait and landscape orientations
-+ Sound effects
-+ Timer-mode
-+ Microsoft style scoring system
++ Game Options: Sound effects
++ Game Options: Timer-mode
++ Game Options: (Microsoft style) scoring system
 + Undo history (a.k.a thoughtful solitaire)
-+ Save and Load games -> Trivial with command pattern if Undo history is implemented
++ Save and Load games
++ Game Options: Enable/Disable animations
++ Game Options: Change animation speed
 ## Pseudo-code
 ```javascript
 /*
