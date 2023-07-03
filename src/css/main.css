@@ -57,6 +57,20 @@ button:active {
     filter: none;
 }
 
+#new-game{
+    display: none;
+    opacity:0;
+    transition: opacity ease-in-out 0.3s;
+
+}
+#new-game.show{
+    display: inline;
+    opacity:1;
+    transition: opacity ease-in-out 0.3s;
+
+}
+
+
 body {
     background: var(--light-pink-bg);
     height: 100vh;
@@ -159,12 +173,19 @@ body {
 .card.large.on-tableau {
     margin-top: -170px;
     position: relative !important;
+    margin-bottom: 0;
 }
 
-.card.large.on-tableau:not(.back):hover {
+.card.large.on-tableau:not(.back):not(:only-child):hover {
     /* margin-left: -10px; */
-    transform: translateX(-10px);
+    transform: translateX(-15px);
+    /* transform: scale(1.05); */
     box-shadow: .25rem .25rem 0.35rem var(--icon-stroke);
+}
+
+.card.large.on-tableau:not(.back):is(:only-child):hover{
+    box-shadow: .25rem .25rem 0.35rem var(--icon-stroke);
+    transform: scale(1.05);
 }
 
 .card.large.on-tableau.back {
@@ -331,10 +352,14 @@ body {
     border-radius: 5vmin;
     text-align: center;
     left: 25vw;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
 }
 
 .message-box.show {
     display: block;
+    opacity: 1;
+    transition: opacity 0.3s ease-in-out;
 }
 
 .overlay {
@@ -378,28 +403,32 @@ body {
 
 
 .card.flipping-first-half {
-    animation: flip-1 0.25s ease-in-out;
+    animation: flip-1 0.15s ease-in-out;
 }
 
-.card.flipping-second-half{
-    animation: flip-2 0.25s ease-in-out;
-    
+.card.flipping-second-half {
+    animation: flip-2 0.15s ease-in-out;
+
 }
+
+
 
 @keyframes flip-1 {
     from {
-        transform:rotateY(0deg);
+        transform: rotateY(0deg);
     }
+
     to {
-        transform:rotateY(90deg);
+        transform: rotateY(90deg);
     }
 }
 
 @keyframes flip-2 {
     from {
-        transform:rotateY(-90deg);
+        transform: rotateY(-90deg);
     }
+
     to {
-        transform:rotateY(0deg);
+        transform: rotateY(0deg);
     }
 }
