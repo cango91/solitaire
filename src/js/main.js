@@ -87,10 +87,10 @@ class CommandHistory {
         }
     }
 
-    redo() {
+    async redo() {
         if (this.undoStack.length) {
             let command = this.undoStack.pop();
-            command.execute();
+            await command.execute();
             this.history.push(command);
             new EventSystem().trigger('history-update', { history: this.history, undo: this.undoStack })
         }
@@ -396,6 +396,23 @@ class Solitaire {
 
     enableInput() {
         this.acceptInput = true;
+    }
+
+    async undo(){
+        if(this.acceptInput && this.history.history.length){
+            this.disableInput();
+            await this.history.undo();
+            this.enableInput();
+        }
+        return;
+    }
+
+    async redo(){
+        if(this.acceptInput && this.history.undoStack.length){
+            this.disableInput();
+            await this.history.redo();
+            this.enableInput();
+        }
     }
 
     async beginGame() {
@@ -729,10 +746,10 @@ gameArea.addEventListener('click', async evt => {
         // we'll handle this here
         if (selfOrParentCheck(evt, '#undo')) {
             if (solitaire.history.history.length)
-                solitaire.history.undo();
+                await solitaire.undo();
         } else if (selfOrParentCheck(evt, "#redo")) {
             if (solitaire.history.undoStack.length)
-                solitaire.history.redo();
+                await solitaire.redo();
         }
     } else if (selfOrParentCheck(evt, 'button')) {
         // we'll handle this here
