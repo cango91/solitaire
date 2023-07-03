@@ -33,36 +33,6 @@ class Command {
     }
 }
 
-// Singleton pattern
-class CommandHistory {
-    constructor() {
-        if (CommandHistory.instance)
-            return CommandHistory.instance
-        this.history = [];
-        this.undoStack = [];
-    }
-    executeCommand(command) {
-        command.execute();
-        this.history.push(command);
-        this.undoStack = [];
-    }
-
-    undo() {
-        if (this.history.length) {
-            let command = this.history.pop();
-            command.undo();
-            this.undoStack.push(command);
-        }
-    }
-
-    redo() {
-        if (this.undoStack.length) {
-            let command = this.undoStack.pop();
-            command.execute();
-            this.history.push(command);
-        }
-    }
-}
 
 // Singleton pattern
 // EventSystem is used to decouple game-logic from DOM manipulation. 
@@ -89,6 +59,51 @@ class EventSystem {
             for (let callback of this.listeners[eventName]) {
                 callback(eventData);
             }
+        // if(this.listeners['all']){
+        //     for(let callback of this.listeners['any']){
+        //         callback(eventData);
+        //     }
+        // }
+    }
+}
+
+// Singleton pattern
+class CommandHistory {
+    constructor() {
+        if (CommandHistory.instance)
+            return CommandHistory.instance
+        this.history = [];
+        this.undoStack = [];
+        CommandHistory.instance = this;
+    }
+    executeCommand(command) {
+        command.execute();
+        this.history.push(command);
+        this.undoStack = [];
+        new EventSystem().trigger('history-update',{ history: this.history,undo: this.undoStack})
+    }
+
+    undo() {
+        if (this.history.length) {
+            let command = this.history.pop();
+            command.undo();
+            this.undoStack.push(command);
+            new EventSystem().trigger('history-update',{ history: this.history,undo: this.undoStack})
+        }
+    }
+
+    redo() {
+        if (this.undoStack.length) {
+            let command = this.undoStack.pop();
+            command.execute();
+            this.history.push(command);
+            new EventSystem().trigger('history-update',{ history: this.history,undo: this.undoStack})
+        }
+    }
+
+    clear() {
+        this.history = [];
+        this.undoStack = [];
     }
 }
 
@@ -211,7 +226,7 @@ class Deck extends Pile {
             for (const tableau of t) {
                 tableau.addCard(this.removeTopCard());
                 // wait for the 'card-dealt' event to complete before moving to the next tableau
-                await new Promise(res => new EventSystem().trigger('card-dealt', { tableau: tableau, callback: res }));
+                await new Promise(res => new EventSystem().trigger('card-dealt', { from: this,tableau: tableau, callback: res }));
             }
             // flip the card at tableau i: doing so without invoking a Command here, because this part is undoable! Any flip action resulting from a user moving the cards and revealing a face-down top-card on a slot should invoke Command!
             const card = tableaux[i].topCard;
@@ -225,16 +240,7 @@ class Deck extends Pile {
         if (this.stack.length < 1)
             throw new Error(`Can't hit! No cards in deck left`);
         let numToRemove = Math.min(numHit, this.stack.length);
-        // ZOOORT use commands here
-        while (numToRemove) {
-            let card = this.removeTopCard();
-            card.flip();
-            waste.addCard(card);
-            await new Promise(res => new EventSystem().trigger('card-dealt', { tableau: waste, callback: res }));
-            new Promise(res => new EventSystem().trigger('top-card-flipped', { card: card, pile: waste, callback: res }));
-            numToRemove--;
-        }
-
+        return new CommandHistory().executeCommand(new HitCommand(this,waste,numToRemove));
     }
 
 }
@@ -262,7 +268,36 @@ class FlipTopCardCommand extends Command {
 
 // Command to 'hit' card(s) from deck to waste pile
 class HitCommand extends Command {
+    constructor(deck,waste,numHit){
+        super();
+        this.deck = deck;
+        this.waste = waste;
+        this.numHit = numHit;
+    }
 
+    async execute(){
+        let numToRemove = this.numHit;
+        while (numToRemove) {
+            let card = this.deck.removeTopCard();
+            card.flip();
+            this.waste.addCard(card);
+            await new Promise(res => new EventSystem().trigger('card-dealt', { from: this.deck, tableau: this.waste, callback: res }));
+            new Promise(res => new EventSystem().trigger('top-card-flipped', { card: card, pile: this.waste, callback: res }));
+            numToRemove--;
+        }
+    }
+
+    async undo(){
+        let numToRemove = this.numHit;
+        while(numToRemove){
+            let card = this.waste.removeTopCard();
+            card.flip();
+            this.deck.addCard(card);
+            await new Promise(res => new EventSystem().trigger('card-dealt', { from: this.waste, tableau: this.deck, callback: res }));
+            new Promise(res => new EventSystem().trigger('top-card-flipped', { card: card, pile: this.deck, callback: res }));
+            numToRemove--;
+        }
+    }
 }
 
 // Command to collect waste pile and turn back into deck
@@ -324,6 +359,7 @@ class Solitaire {
             cardEl.classList.add('card', 'large', 'deck', 'back');
             this.DOM.deckElement.append(cardEl);
         });
+        this.history.clear();
         // start accepting input
         this.enableInput();
     }
@@ -396,7 +432,8 @@ class Solitaire {
         const tableauEl = this.getPileDOM(pile);
         const cardEl = tableauEl.childElementCount > 1 ? tableauEl.querySelector('.card:last-child') : tableauEl.firstElementChild;
         let classToAdd, classToRemove;
-        if (cardEl.classList.contains('back')) {
+        //if (cardEl.classList.contains('back')) {
+        if(card.faceUp){
             // we're flipping card face-up
             classToAdd = card.cssClass;
             classToRemove = 'back';
@@ -419,8 +456,9 @@ class Solitaire {
         }, FLIP_DURATION / 2);
     }
 
-    renderCardDealt({ tableau, callback }) {
-        const card = this.DOM.deckElement.childElementCount > 1 ? this.DOM.deckElement.querySelector('.card:last-child') : this.DOM.deckElement.firstElementChild;
+    renderCardDealt({ from, tableau, callback }) {
+        const source = this.getPileDOM(from);
+        const card = source.childElementCount > 1 ? source.querySelector('.card:last-child') : source.firstElementChild;
         const tableauElement = this.getPileDOM(tableau);
         // if the tableau is empty, use the slot's location, if not use the last child card's location as target
         const targetRect = tableauElement.childElementCount > 0 ? tableauElement.lastElementChild.getBoundingClientRect() : tableauElement.getBoundingClientRect();
@@ -446,9 +484,9 @@ class Solitaire {
         };
         const newCard = document.createElement('div');
         let slotClass = tableau instanceof Tableau ? 'on-tableau' : tableau instanceof Waste ? 'on-waste' : tableau instanceof Foundation ? 'on-foundation' : 'deck' ;
-        newCard.classList.add('card', 'large',slotClass, 'back');
+        newCard.classList.add('card', 'large', slotClass, 'back');
         card.animate(keyframes, options).onfinish = () => {
-            this.DOM.deckElement.removeChild(card);
+            source.removeChild(card);
             tableauElement.append(newCard);
             callback();
         };
@@ -477,7 +515,7 @@ const icons = {
     'game-options': document.getElementById('gme-options'),
     'about': document.getElementById('about'),
     'undo': document.getElementById('undo'),
-    //    'redo': document.getElementById('redo'),    // REMINDER: ADD THIS ON HTML SIDE :)
+    'redo': document.getElementById('redo'),
 };
 const overlay = document.querySelector('.overlay');
 const msgbox = document.querySelector('.message-box');
@@ -524,7 +562,24 @@ new EventSystem().listen('game-begun', () => {
 new EventSystem().listen('game-ended', () => {
     fadeInOutElement(msgbox);
     fadeInOutElement(newGameBtn);
+    fadeInOutElement(icons.undo, false, 100);
+    fadeInOutElement(icons.redo,false,100);
 })
+
+new EventSystem().listen('history-update', ({history,undo})=>{
+    if(history.length){
+        fadeInOutElement(icons.undo,true,100);
+    }else{
+        fadeInOutElement(icons.undo,false,100);
+    }
+    if(undo.length){
+        fadeInOutElement(icons.redo,true,100);
+    }else{
+        fadeInOutElement(icons.redo,false,100);
+    }
+})
+
+
 
 // conveneince function for checking those pesky sub-elements that get clicked on all the time
 function selfOrParentCheck(event, parentSelector) {
@@ -536,6 +591,13 @@ gameArea.addEventListener('click', evt => {
     // console.log(evt.target);
     if (selfOrParentCheck(evt, '.icon')) {
         // we'll handle this here
+        if(selfOrParentCheck(evt,'#undo')){
+            if(solitaire.history.history.length)
+                solitaire.history.undo();
+        }else if(selfOrParentCheck(evt,"#redo")){
+            if(solitaire.history.undoStack.length)
+                solitaire.history.redo();
+        }
     } else if (selfOrParentCheck(evt, 'button')) {
         // we'll handle this here
         if (selfOrParentCheck(evt, '#new-game') && solitaire.acceptInput) {
