@@ -25,10 +25,10 @@ const DEAL_SPEED = 10000;
 
 // abstract class for undoable actions. Actions that can be undone should be encapsulated as commands
 class Command {
-    execute() {
+    async execute() {
         throw new Error("Method 'execute' must be implemented");
     }
-    undo() {
+    async undo() {
         throw new Error("Method 'undo' must be implemented");
     }
 }
@@ -71,17 +71,17 @@ class CommandHistory {
         this.undoStack = [];
         CommandHistory.instance = this;
     }
-    executeCommand(command) {
-        command.execute();
+    async executeCommand(command) {
+        await command.execute();
         this.history.push(command);
         this.undoStack = [];
         new EventSystem().trigger('history-update', { history: this.history, undo: this.undoStack })
     }
 
-    undo() {
+    async undo() {
         if (this.history.length) {
             let command = this.history.pop();
-            command.undo();
+            await command.undo();
             this.undoStack.push(command);
             new EventSystem().trigger('history-update', { history: this.history, undo: this.undoStack })
         }
@@ -186,12 +186,12 @@ class Foundation extends Pile {
 }
 
 class Waste extends Pile {
-    collect(deck) {
-        if (deck.length)
+    async collect(deck) {
+        if (deck.stack.length)
             throw new Error(`Can't collect when deck's not empty!`);
         if (!this.stack.length)
             throw new Error(`No cards in waste pile to collect!`);
-        new CommandHistory().executeCommand(new CollectWastePile(this, deck));
+        await new CommandHistory().executeCommand(new CollectWastePile(this, deck));
     }
 
 }
@@ -240,9 +240,9 @@ class Deck extends Pile {
 
     async hit(numHit, waste) {
         if (this.stack.length < 1)
-            throw new Error(`Can't hit! No cards in deck left`);
+            throw new Error(`Can't hit! Deck empty`);
         let numToRemove = Math.min(numHit, this.stack.length);
-        return new CommandHistory().executeCommand(new HitCommand(this, waste, numToRemove));
+        await new CommandHistory().executeCommand(new HitCommand(this, waste, numToRemove));
     }
 
 }
@@ -258,7 +258,7 @@ class FlipTopCardCommand extends Command {
     }
     async execute() {
         this.pile.topCard.flip();
-        return await new Promise(resolve => {
+        await new Promise(resolve => {
             new EventSystem().trigger('top-card-flipped', { card: this.card, pile: this.pile, callback: resolve });
         });
     }
@@ -284,7 +284,7 @@ class HitCommand extends Command {
             card.flip();
             this.waste.addCard(card);
             await new Promise(res => new EventSystem().trigger('card-dealt', { from: this.deck, tableau: this.waste, callback: res }));
-            new Promise(res => new EventSystem().trigger('top-card-flipped', { card: card, pile: this.waste, callback: res }));
+            await new Promise(res => new EventSystem().trigger('top-card-flipped', { card: card, pile: this.waste, callback: res }));
             numToRemove--;
         }
     }
@@ -414,7 +414,8 @@ class Solitaire {
             if (this.deck.stack.length === 52) return this.beginGame();
             this.disableInput();
             await this.deck.hit(this.difficulty, this.waste)
-                .catch(() => {
+                .then(this.enableInput())
+                .catch(async () => {
                     // deck is empty, we should check for win state and pre-win conditions
                     if (this.checkPreWinConditions()) {
                         // enable fast-forward
@@ -422,11 +423,12 @@ class Solitaire {
                         // fire off game-ended and game-won event
                     } else {
                         // collect pile and add it to deck (in reverse)
-                        this.waste.collect(this.deck);
+                        await this.waste.collect(this.deck)
+                        .catch(err=>{console.log(err);this.disableInput();})
+                        .then(this.enableInput());
 
                     }
                 });
-            this.enableInput();
             return;
         }
     }
@@ -510,7 +512,7 @@ class Solitaire {
         }, FLIP_DURATION / 2);
     }
 
-    renderCardDealt({ from, tableau, callback }) {
+    async renderCardDealt({ from, tableau, callback }) {
         const source = this.getPileDOM(from);
         const card = source.childElementCount > 1 ? source.querySelector('.card:last-child') : source.firstElementChild;
         const tableauElement = this.getPileDOM(tableau);
@@ -548,59 +550,186 @@ class Solitaire {
     }
 
 
+    // async renderWasteCollected({ deck, waste, callback }) {
+    //     const source = this.getPileDOM(waste);
+    //     const target = this.getPileDOM(deck);
+    //     let sourceRect = source.getBoundingClientRect();
+    //     let targetRect = target.getBoundingClientRect();
+    //     let duration = 100
+    //     let options = {
+    //         duration,
+    //     }
+    //     let promises = [];
+    //     // flip all cards in one go       
+    //     if (!deck.stack[0].faceUp) {
+    //         // we're turning every cards back, we don't need to know their actual card values
+    //         for (const card of source.children) {
+    //             card.classList.add('flipping-first-half');
+    //         }
+    //         setTimeout(() => {
+    //             for (const card of source.children) {
+    //                 card.className = '';
+    //                 card.classList.add('card', 'large', 'back', 'flipping-second-half', this.getOnPileClassName(waste));
+    //             }
+    //             setTimeout(() => {
+    //                 for (const card of source.children) {
+    //                     card.classList.remove('flipping-second-half');
+    //                     // move as a whole to target
+    //                     let keyframes = [
+    //                         { transform: 'translate(0,0)' },
+    //                         { transform: `translate(${targetRect.left - sourceRect.left}px, ${targetRect.top - sourceRect.top}px)` }
+    //                     ]
+    //                     card.animate(keyframes, options).onfinish = () => promises.push(new Promise(res => {
+    //                         card.classList.remove(this.getOnPileClassName(waste));
+    //                         card.classList.add(this.getOnPileClassName(deck));
+    //                         target.append(card);
+    //                         card.style.transform = 'translate(0,0);';
+    //                         card.style.display = 'inline';
+    //                         console.log(`${card.classList} finished animation`);
+    //                         res();
+    //                     }));
+    //                 }
+    //             }, FLIP_DURATION / 2);
+    //         }, FLIP_DURATION / 2);
+
+    //     } else {
+    //         // we're undoing a wasteCollection, we need to know the id's of the cards
+    //     }
+    //     await Promise.all(promises).then(() => {
+    //         console.log('all animations done');
+    //         callback();
+    //     })
+
+
+    // }
+    // async renderWasteCollected({ deck, waste, callback }) {
+    //     const source = this.getPileDOM(waste);
+    //     const target = this.getPileDOM(deck);
+    //     const sourceRect = source.getBoundingClientRect();
+    //     const targetRect = target.getBoundingClientRect();
+    //     const duration = 100;
+    //     const options = {
+    //         duration,
+    //     };
+    //     const promises = [];
+    
+    //     // flip all cards in one go
+    //     if (!deck.stack[0].faceUp) {
+    //         // We're turning every card's back, so we don't need to know their actual card values.
+    //         for (const card of source.children) {
+    //             card.classList.add('flipping-first-half');
+    //         }
+    
+    //         setTimeout(() => {
+    //             for (const card of source.children) {
+    //                 card.className = '';
+    //                 card.classList.add('card', 'large', 'back', 'flipping-second-half', this.getOnPileClassName(waste));
+    //             }
+    
+    //             setTimeout(() => {
+    //                 for (const card of source.children) {
+    //                     card.classList.remove('flipping-second-half');
+    
+    //                     // Move as a whole to target
+    //                     const keyframes = [
+    //                         { transform: 'translate(0,0)' },
+    //                         { transform: `translate(${targetRect.left - sourceRect.left}px, ${targetRect.top - sourceRect.top}px)` }
+    //                     ];
+    
+    //                     // Create a promise for each card's animation
+    //                     const promise = new Promise((resolve) => {
+    //                         const animation = card.animate(keyframes, options);
+    //                         animation.onfinish = () => {
+    //                             card.classList.remove(this.getOnPileClassName(waste));
+    //                             card.classList.add(this.getOnPileClassName(deck));
+    //                             target.append(card);
+    //                             // card.style.transform = 'translate(0,0)';
+    //                             // card.style.display = 'inline';
+    //                             console.log(`${card.classList} finished animation`);
+    //                             resolve(); // Resolve the promise once the animation is finished
+    //                         };
+    //                     });
+    
+    //                     promises.push(promise);
+    //                 }
+    //             }, FLIP_DURATION / 2);
+    //         }, FLIP_DURATION / 2);
+    //     } else {
+    //         // We're undoing a wasteCollection, and we need to know the ids of the cards.
+
+    //     }
+    
+    //     // Wait for all animations to finish before invoking the callback
+    //     await Promise.all(promises).then(()=>{
+    //         console.log('all animations done');
+    //         callback();
+    //     });
+    // }
     async renderWasteCollected({ deck, waste, callback }) {
         const source = this.getPileDOM(waste);
         const target = this.getPileDOM(deck);
-        let sourceRect = source.getBoundingClientRect();
-        let targetRect = target.getBoundingClientRect();
-        let duration = 100
-        let options = {
-            duration,
-        }
-        let promiseCounter = 0;
+        const sourceRect = source.getBoundingClientRect();
+        const targetRect = target.getBoundingClientRect();
+        const duration = 100;
+        const options = { duration };
         let promises = [];
-        // flip all cards in one go       
-        if (!deck.stack[0].faceUp) {
-            // we're turning every cards back, we don't need to know their actual card values
-            for (const card of source.children) {
-                card.classList.add('flipping-first-half');
-            }
-            setTimeout(() => {
-                for (const card of source.children) {
-                    card.className = '';
-                    card.classList.add('card', 'large', 'back', 'flipping-second-half', this.getOnPileClassName(waste));
-                }
+    
+        const flipAndAnimateCards = () => {
+            return new Promise(resolve => {
                 setTimeout(() => {
                     for (const card of source.children) {
                         card.classList.remove('flipping-second-half');
-                        // move as a whole to target
-                        let keyframes = [
+    
+                        const keyframes = [
                             { transform: 'translate(0,0)' },
                             { transform: `translate(${targetRect.left - sourceRect.left}px, ${targetRect.top - sourceRect.top}px)` }
-                        ]
-                        card.animate(keyframes, options).onfinish =()=> promises.push(new Promise(res => {
-                            card.classList.remove(this.getOnPileClassName(waste));
-                            card.classList.add(this.getOnPileClassName(deck));
-                            target.append(card);
-                            //source.removeChild(card);
-                            promiseCounter++;
-                            card.style.transform='translate(0,0);';
-                            card.style.display='inline';
-                            res();
-                        }));
+                        ];
+    
+                        const promise = new Promise((resolve) => {
+                            const animation = card.animate(keyframes, options);
+                            animation.onfinish = () => {
+                                card.classList.remove(this.getOnPileClassName(waste));
+                                card.classList.add(this.getOnPileClassName(deck));
+                                target.append(card);
+                                console.log(`${card.classList} finished animation`);
+                                resolve(); // Resolve the promise once the animation is finished
+                            };
+                        });
+    
+                        promises.push(promise);
                     }
+                    resolve();
                 }, FLIP_DURATION / 2);
-            }, FLIP_DURATION / 2);
-
+            });
+        };
+    
+        const flipCards = () => {
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    for (const card of source.children) {
+                        card.className = '';
+                        card.classList.add('card', 'large', 'back', 'flipping-second-half', this.getOnPileClassName(waste));
+                    }
+    
+                    resolve(flipAndAnimateCards());
+                }, FLIP_DURATION / 2);
+            });
+        };
+    
+        if (!deck.stack[0].faceUp) {
+            for (const card of source.children) {
+                card.classList.add('flipping-first-half');
+            }
+    
+            await flipCards();
         } else {
-            // we're undoing a wasteCollection, we need to know the id's of the cards
+            // We're undoing a wasteCollection, and we need to know the ids of the cards.
         }
-        await Promise.all(promises).then(()=>{
-            console.log('calling');
-            callback();
-        })
-
-
+    
+        // Wait for all animations to finish before invoking the callback
+        await Promise.all(promises);
+        console.log('all animations done');
+        callback();
     }
 
 
@@ -698,7 +827,7 @@ function selfOrParentCheck(event, parentSelector) {
 }
 
 // delegated event listeners will further delegate to Solitaire class if one of the game icons are not the event targets
-gameArea.addEventListener('click', evt => {
+gameArea.addEventListener('click', async evt => {
     // console.log(evt.target);
     if (selfOrParentCheck(evt, '.icon')) {
         // we'll handle this here
@@ -717,7 +846,8 @@ gameArea.addEventListener('click', evt => {
         }
     } else {
         // we'll delegate
-        return solitaire.handleClickEvent(evt);
+        await solitaire.handleClickEvent(evt);
+        return;
     }
 });
 
@@ -725,71 +855,71 @@ gameArea.addEventListener('click', evt => {
 
 /*---- DEBUGGING ----*/
 
-window.ConsoleObject = {};
-window.ConsoleObject.solitaire = solitaire;
-window.ConsoleObject.vars = { tableaux, foundations };
-window.ConsoleObject.fade = fadeInOutElement;
-window.ConsoleObject.Card = Card;
-window.ConsoleObject.Deck = Deck;
-window.ConsoleObject.Commands = [FlipTopCardCommand];
-window.ConsoleObject.History = new CommandHistory();
-window.ConsoleObject.Tableau = Tableau;
-window.ConsoleObject.tryFlipping = function (card, cardClass, oldClass = 'back') {
-    card.classList.add('flipping-first-half');
-    setTimeout(function () {
-        card.classList.remove(oldClass);
-        card.classList.remove('flipping-first-half')
-        card.classList.add(cardClass);
-        card.classList.add('flipping-second-half')
-        setTimeout(function () {
-            card.classList.remove('flipping-second-half');
-        }, 500);
-    }, 250);
-}
+// window.ConsoleObject = {};
+// window.ConsoleObject.solitaire = solitaire;
+// window.ConsoleObject.vars = { tableaux, foundations };
+// window.ConsoleObject.fade = fadeInOutElement;
+// window.ConsoleObject.Card = Card;
+// window.ConsoleObject.Deck = Deck;
+// window.ConsoleObject.Commands = [FlipTopCardCommand];
+// window.ConsoleObject.History = new CommandHistory();
+// window.ConsoleObject.Tableau = Tableau;
+// window.ConsoleObject.tryFlipping = function (card, cardClass, oldClass = 'back') {
+//     card.classList.add('flipping-first-half');
+//     setTimeout(function () {
+//         card.classList.remove(oldClass);
+//         card.classList.remove('flipping-first-half')
+//         card.classList.add(cardClass);
+//         card.classList.add('flipping-second-half')
+//         setTimeout(function () {
+//             card.classList.remove('flipping-second-half');
+//         }, 500);
+//     }, 250);
+// }
 
-window.ConsoleObject.tryDealing = function (numTableau, speed = 2500, dealingFrom = '#deck-slot', _card = null) { /* speed in px/sec */
-    // get top card from deck
-    const card = _card ? _card : document.querySelector('.card.deck:last-child');
-    const slot = document.querySelector(`${typeof numTableau === 'number' ? `#tableau-${numTableau}` : numTableau}`);
-    const dealingSlot = document.querySelector(dealingFrom);
-    let slotRect = slot.firstElementChild ? slot.lastElementChild.getBoundingClientRect() : slot.getBoundingClientRect();
+// window.ConsoleObject.tryDealing = function (numTableau, speed = 2500, dealingFrom = '#deck-slot', _card = null) { /* speed in px/sec */
+//     // get top card from deck
+//     const card = _card ? _card : document.querySelector('.card.deck:last-child');
+//     const slot = document.querySelector(`${typeof numTableau === 'number' ? `#tableau-${numTableau}` : numTableau}`);
+//     const dealingSlot = document.querySelector(dealingFrom);
+//     let slotRect = slot.firstElementChild ? slot.lastElementChild.getBoundingClientRect() : slot.getBoundingClientRect();
 
-    const cardRect = card.getBoundingClientRect();
-    let initialTop = cardRect.top;
-    let initialLeft = cardRect.left;
+//     const cardRect = card.getBoundingClientRect();
+//     let initialTop = cardRect.top;
+//     let initialLeft = cardRect.left;
 
-    // set the card's position to fixed and move it to the initial position
-    card.style.position = 'fixed';
-    card.style.top = `${initialTop}px`;
-    card.style.left = `${initialLeft}px`;
-    card.style.zIndex = 500;
-    let keyframes = [
-        // initial state (card's current position)
-        { transform: 'translate(0, 0)' },
-        // final state (offset from the card's position to the slot's position)
-        { transform: `translate(${slotRect.left - initialLeft}px, ${slotRect.top - initialTop}px)` }
-    ];
+//     // set the card's position to fixed and move it to the initial position
+//     card.style.position = 'fixed';
+//     card.style.top = `${initialTop}px`;
+//     card.style.left = `${initialLeft}px`;
+//     card.style.zIndex = 500;
+//     let keyframes = [
+//         // initial state (card's current position)
+//         { transform: 'translate(0, 0)' },
+//         // final state (offset from the card's position to the slot's position)
+//         { transform: `translate(${slotRect.left - initialLeft}px, ${slotRect.top - initialTop}px)` }
+//     ];
 
-    let duration = Math.sqrt((slotRect.left - initialLeft) ** 2 + (slotRect.top - initialTop) ** 2) / speed * 1000;
+//     let duration = Math.sqrt((slotRect.left - initialLeft) ** 2 + (slotRect.top - initialTop) ** 2) / speed * 1000;
 
-    let options = {
-        duration: duration,
-        fill: 'forwards'
-    };
-    const newCard = document.createElement('div');
-    newCard.classList.add('card', 'large', 'on-tableau', 'back');
-    card.animate(keyframes, options).onfinish = () => {
-        dealingSlot.removeChild(card);
-        slot.append(newCard);
-    };
-    return newCard;
-}
+//     let options = {
+//         duration: duration,
+//         fill: 'forwards'
+//     };
+//     const newCard = document.createElement('div');
+//     newCard.classList.add('card', 'large', 'on-tableau', 'back');
+//     card.animate(keyframes, options).onfinish = () => {
+//         dealingSlot.removeChild(card);
+//         slot.append(newCard);
+//     };
+//     return newCard;
+// }
 
-window.ConsoleObject.tryWaste = function (num = 1) {
-    for (let i = 0; i < num; i++) {
-        const card = window.ConsoleObject.tryDealing("#waste-slot");
-        card.classList.remove('on-tableau');
-        card.classList.add('on-waste');
-        window.ConsoleObject.tryFlipping(card, 'dA');
-    }
-}
+// window.ConsoleObject.tryWaste = function (num = 1) {
+//     for (let i = 0; i < num; i++) {
+//         const card = window.ConsoleObject.tryDealing("#waste-slot");
+//         card.classList.remove('on-tableau');
+//         card.classList.add('on-waste');
+//         window.ConsoleObject.tryFlipping(card, 'dA');
+//     }
+// }
