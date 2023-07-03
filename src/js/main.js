@@ -19,7 +19,7 @@ const FACE_VALUES = {
 // Define flipping animation duration, better match CSS
 const FLIP_DURATION = 300;
 // Define card deal speed in px/sec
-const DEAL_SPEED = 3000;
+const DEAL_SPEED = 10000;
 
 /*---- CLASSES ----*/
 
@@ -202,6 +202,8 @@ class Deck extends Pile {
     }
 
     async deal(tableaux) {
+        if (this.stack.length !== 52)
+            throw new Error(`Can't deal! Deck must have 52 cards at the beginning of the game`);
         // deal to each tableau i+1 cards in total
         for (let i = 0; i < tableaux.length; i++) {
             // deal starting from index i
@@ -217,6 +219,22 @@ class Deck extends Pile {
             // wait for the 'top-card-flipped' event to complete before moving to the next tableau
             new Promise(res => new EventSystem().trigger('top-card-flipped', { card: card, pile: tableaux[i], callback: res }));
         }
+    }
+
+    async hit(numHit, waste) {
+        if (this.stack.length < 1)
+            throw new Error(`Can't hit! No cards in deck left`);
+        let numToRemove = Math.min(numHit, this.stack.length);
+        // ZOOORT use commands here
+        while (numToRemove) {
+            let card = this.removeTopCard();
+            card.flip();
+            waste.addCard(card);
+            await new Promise(res => new EventSystem().trigger('card-dealt', { tableau: waste, callback: res }));
+            new Promise(res => new EventSystem().trigger('top-card-flipped', { card: card, pile: waste, callback: res }));
+            numToRemove--;
+        }
+
     }
 
 }
@@ -275,6 +293,8 @@ class Solitaire {
         this.renderCardDealt = this.renderCardDealt.bind(this);
         this.renderFlipCard = this.renderFlipCard.bind(this);
         this.getTableauDOM = this.getTableauDOM.bind(this);
+        this.getFoundationDOM = this.getFoundationDOM.bind(this);
+        this.getPileDOM = this.getPileDOM.bind(this);
     }
 
     // initialize the DOM references, tableauxElements and foundationElements should be arrays that correspond to ltr order on the screen (leftmost should have index 0)
@@ -326,9 +346,10 @@ class Solitaire {
         this.enableInput();
     }
 
-    handleClickEvent(evt) {
+    async handleClickEvent(evt) {
         if (selfOrParentCheck(evt, '#deck-slot')) {
             if (this.deck.stack.length === 52) return this.beginGame();
+            return await this.deck.hit(this.difficulty,this.waste);
         }
     }
 
@@ -340,15 +361,39 @@ class Solitaire {
 
     }
 
+    getPileDOM(pile) {
+        if (!pile instanceof Pile)
+            throw new Error(`Not a Pile!`);
+        if (pile === this.waste)
+            return this.DOM.wasteElement;
+        if (pile === this.deck)
+            return this.DOM.deckElement
+        let result;
+        try {
+            result = this.getTableauDOM(pile);
+        } catch {
+            result = this.getFoundationDOM(pile);
+        } finally {
+            if (result)
+                return result;
+            else
+                throw new Error(`Pile not found!`);
+        }
+    }
+
     getTableauDOM(tableau) {
         return this.DOM.tableauxElements[this.tableaux.findIndex(tab => tab === tableau)];
+    }
+
+    getFoundationDOM(foundation) {
+        return this.DOM.foundationElements[this.foundations.findIndex(found => found === foundation)];
     }
 
     // animation functions.
     // A NOTE ON STYLE INCONSISTENY: 
     // I'd much prefer inconsistent styling here than explicit binding, which is VERY UGLY! ALSO VERY HARD TO DEBUG! SPENT HOURS BECAUSE I BOUND THE WRONG FUNCTION BY MISTAKE
     renderFlipCard({ card, pile, callback }) {
-        const tableauEl = this.getTableauDOM(pile);
+        const tableauEl = this.getPileDOM(pile);
         const cardEl = tableauEl.childElementCount > 1 ? tableauEl.querySelector('.card:last-child') : tableauEl.firstElementChild;
         let classToAdd, classToRemove;
         if (cardEl.classList.contains('back')) {
@@ -376,7 +421,7 @@ class Solitaire {
 
     renderCardDealt({ tableau, callback }) {
         const card = this.DOM.deckElement.childElementCount > 1 ? this.DOM.deckElement.querySelector('.card:last-child') : this.DOM.deckElement.firstElementChild;
-        const tableauElement = this.getTableauDOM(tableau);
+        const tableauElement = this.getPileDOM(tableau);
         // if the tableau is empty, use the slot's location, if not use the last child card's location as target
         const targetRect = tableauElement.childElementCount > 0 ? tableauElement.lastElementChild.getBoundingClientRect() : tableauElement.getBoundingClientRect();
         const cardRect = card.getBoundingClientRect();
@@ -400,7 +445,8 @@ class Solitaire {
             fill: 'forwards'
         };
         const newCard = document.createElement('div');
-        newCard.classList.add('card', 'large', 'on-tableau', 'back');
+        let slotClass = tableau instanceof Tableau ? 'on-tableau' : tableau instanceof Waste ? 'on-waste' : tableau instanceof Foundation ? 'on-foundation' : 'deck' ;
+        newCard.classList.add('card', 'large',slotClass, 'back');
         card.animate(keyframes, options).onfinish = () => {
             this.DOM.deckElement.removeChild(card);
             tableauElement.append(newCard);
@@ -462,8 +508,13 @@ const gameDOM = {
 let solitaire = new Solitaire();
 solitaire.initialize(gameDOM);
 
-// show beginning game message, hide new game button
-// setup listener to hide the beginning message and show new game button when cards are dealt === game begun
+// show beginning game message
+// icebox feature: add game save/load and localStore settings loading here
+solitaire.newGame({ gameMode: 'default', difficulty: 1 });
+
+/*---- DOM EVENT LISTENERS ----*/
+
+// setup listener to hide the beginning message and show new game button when game begun
 msgbox.classList.add('show');
 
 new EventSystem().listen('game-begun', () => {
@@ -474,10 +525,6 @@ new EventSystem().listen('game-ended', () => {
     fadeInOutElement(msgbox);
     fadeInOutElement(newGameBtn);
 })
-// icebox feature: add game save/load and localStore settings loading here
-solitaire.newGame({ gameMode: 'default', difficulty: 1 });
-
-/*---- DOM EVENT LISTENERS ----*/
 
 // conveneince function for checking those pesky sub-elements that get clicked on all the time
 function selfOrParentCheck(event, parentSelector) {

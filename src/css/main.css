@@ -156,6 +156,7 @@ body {
 }
 
 
+
 .card {
     margin-left: 0;
     transition: all 0.2s;
@@ -179,7 +180,7 @@ body {
 .card.large.on-tableau:not(.back):not(:only-child):hover {
     /* margin-left: -10px; */
     transform: translateX(-15px);
-    /* transform: scale(1.05); */
+    transform: scale(1.1);
     box-shadow: .25rem .25rem 0.35rem var(--icon-stroke);
 }
 
@@ -193,18 +194,84 @@ body {
     margin-bottom: 0;
 }
 
-.card.large.on-waste {
+
+.card.large.on-waste{
     margin-bottom: calc(-5.5em * 0.9);
     position: relative;
 }
 
+
 .card.large.on-waste:not(:only-child):hover {
-    margin-left: -15px;
+    transform: translateX(-15px);
 }
 
-.card.card.large.on-waste:last-child:hover {
+/* Show only the top-3 cards on waste pile */
+/*  Since waste-pile can have max of 24 children in this game this is a feasible and managable approach, compared to doing this through javascript*/
+
+.on-waste:nth-last-child(4):not(:nth-last-child(-n+3)),
+.on-waste:nth-last-child(5):not(:nth-last-child(-n+3)),
+.on-waste:nth-last-child(6):not(:nth-last-child(-n+3)),
+.on-waste:nth-last-child(7):not(:nth-last-child(-n+3)),
+.on-waste:nth-last-child(8):not(:nth-last-child(-n+3)),
+.on-waste:nth-last-child(9):not(:nth-last-child(-n+3)),
+.on-waste:nth-last-child(10):not(:nth-last-child(-n+3)),
+.on-waste:nth-last-child(11):not(:nth-last-child(-n+3)),
+.on-waste:nth-last-child(12):not(:nth-last-child(-n+3)),
+.on-waste:nth-last-child(13):not(:nth-last-child(-n+3)),
+.on-waste:nth-last-child(14):not(:nth-last-child(-n+3)),
+.on-waste:nth-last-child(15):not(:nth-last-child(-n+3)),
+.on-waste:nth-last-child(16):not(:nth-last-child(-n+3)),
+.on-waste:nth-last-child(17):not(:nth-last-child(-n+3)),
+.on-waste:nth-last-child(18):not(:nth-last-child(-n+3)),
+.on-waste:nth-last-child(19):not(:nth-last-child(-n+3)),
+.on-waste:nth-last-child(20):not(:nth-last-child(-n+3)),
+.on-waste:nth-last-child(21):not(:nth-last-child(-n+3)),
+.on-waste:nth-last-child(22):not(:nth-last-child(-n+3)),
+.on-waste:nth-last-child(23):not(:nth-last-child(-n+3)),
+.on-waste:nth-last-child(24):not(:nth-last-child(-n+3)),
+.on-waste:nth-last-child(25):not(:nth-last-child(-n+3)),
+.on-waste:nth-last-child(26):not(:nth-last-child(-n+3)),
+.on-waste:nth-last-child(27):not(:nth-last-child(-n+3)),
+.on-waste:nth-last-child(28):not(:nth-last-child(-n+3)){
+    position: fixed;
+    margin-bottom: 0;
+}
+
+.card.large.on-waste:nth-last-child(4):not(:nth-last-child(-n+3)):hover,
+.card.large.on-waste:nth-last-child(5):not(:nth-last-child(-n+3)):hover,
+.card.large.on-waste:nth-last-child(6):not(:nth-last-child(-n+3)):hover,
+.card.large.on-waste:nth-last-child(7):not(:nth-last-child(-n+3)):hover,
+.card.large.on-waste:nth-last-child(8):not(:nth-last-child(-n+3)):hover,
+.card.large.on-waste:nth-last-child(9):not(:nth-last-child(-n+3)):hover,
+.card.large.on-waste:nth-last-child(10):not(:nth-last-child(-n+3)):hover,
+.card.large.on-waste:nth-last-child(11):not(:nth-last-child(-n+3)):hover,
+.card.large.on-waste:nth-last-child(12):not(:nth-last-child(-n+3)):hover,
+.card.large.on-waste:nth-last-child(13):not(:nth-last-child(-n+3)):hover,
+.card.large.on-waste:nth-last-child(14):not(:nth-last-child(-n+3)):hover,
+.card.large.on-waste:nth-last-child(15):not(:nth-last-child(-n+3)):hover,
+.card.large.on-waste:nth-last-child(16):not(:nth-last-child(-n+3)):hover,
+.card.large.on-waste:nth-last-child(17):not(:nth-last-child(-n+3)):hover,
+.card.large.on-waste:nth-last-child(18):not(:nth-last-child(-n+3)):hover,
+.card.large.on-waste:nth-last-child(19):not(:nth-last-child(-n+3)):hover,
+.card.large.on-waste:nth-last-child(20):not(:nth-last-child(-n+3)):hover,
+.card.large.on-waste:nth-last-child(21):not(:nth-last-child(-n+3)):hover,
+.card.large.on-waste:nth-last-child(22):not(:nth-last-child(-n+3)):hover,
+.card.large.on-waste:nth-last-child(23):not(:nth-last-child(-n+3)):hover,
+.card.large.on-waste:nth-last-child(24):not(:nth-last-child(-n+3)):hover,
+.card.large.on-waste:nth-last-child(25):not(:nth-last-child(-n+3)):hover,
+.card.large.on-waste:nth-last-child(26):not(:nth-last-child(-n+3)):hover,
+.card.large.on-waste:nth-last-child(27):not(:nth-last-child(-n+3)):hover,
+.card.large.on-waste:nth-last-child(28):not(:nth-last-child(-n+3)):hover{
+    box-shadow: none;
+    transform: none;
+}
+
+
+.card.large.on-waste:last-child:hover {
     box-shadow: .25rem .25rem 0.35rem var(--icon-stroke);
 }
+
+
 
 .card.back.deck {
     margin-bottom: -89.8px;
