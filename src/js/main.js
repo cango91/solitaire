@@ -16,10 +16,18 @@ const FACE_VALUES = {
     13: 'K'
 };
 
-// Define flipping animation duration, better match CSS
+// Define flipping animation duration in ms, should match CSS
 const FLIP_DURATION = 300;
 // Define card deal speed in px/sec
 const DEAL_SPEED = 10000;
+// Define how long it takes to move pile from waste to deck in ms
+const WASTE_DURATION = 100;
+
+// Define default sound settings
+const MUSIC_ENABLED = false;
+const MUSIC_VOLUME = 0.5;
+const SOUNDS_ENABLED = false;
+const SOUNDS_VOLUME = 0.5;
 
 /*---- CLASSES ----*/
 
@@ -102,6 +110,71 @@ class CommandHistory {
     }
 }
 
+// Singleton pattern
+// Ideally, use LoadLocal() static method to create the singleton
+// But if created with new keyword, should still have a valid singleton object with default config
+class GameOptions {
+    constructor({
+        difficulty = 3,
+        animationsEnabled = true,
+        animationSpeeds = {} = {
+            flip_duration: FLIP_DURATION,
+            deal_speed: DEAL_SPEED,
+            waste_duration: WASTE_DURATION
+        },
+        undoEnabled,
+        gameMode = 'default',
+        soundSettings = {} = {
+            music_enabled: MUSIC_ENABLED,
+            music_volume: MUSIC_VOLUME,
+            sounds_enabled: SOUNDS_ENABLED,
+            sounds_volume: SOUNDS_VOLUME
+        }
+    } = {}) {
+        if (GameOptions.instance) {
+            return GameOptions.instance;
+        }
+        this.difficulty = difficulty;
+        this.animationsEnabled = animationsEnabled;
+        this.animationSpeeds = animationSpeeds;
+        this.undoEnabled = undoEnabled;
+        this.gameMode = gameMode;
+        this.soundSettings = soundSettings;
+        GameOptions.instance = this;
+    }
+
+    static LoadLocal() {
+        let settings;
+        try {
+            settings = JSON.parse(localStorage.getItem('gameOptions'));
+        } catch (e) {
+            console.error('Failed to parse saved settings, using defaults.', e);
+        }
+        // Even if settings is undefined, should still return a valid object with default configuration thanks to 'destructuring assignment with default values' we have for the constructor
+        if (!GameOptions.instance) {
+            new GameOptions();
+        } else if (settings) {
+            // If the instance already exists, set its fields with the loaded settings
+            GameOptions.instance.difficulty = settings.difficulty;
+            GameOptions.instance.animationsEnabled = settings.animationsEnabled;
+            GameOptions.instance.animationSpeeds = settings.animationSpeeds;
+            GameOptions.instance.undoEnabled = settings.undoEnabled;
+            GameOptions.instance.gameMode = settings.gameMode;
+            GameOptions.instance.soundSettings = settings.soundSettings;
+        }
+        return GameOptions.instance;
+    }
+
+    saveLocal() {
+        try {
+            localStorage.setItem('gameOptions', JSON.stringify(this));
+        } catch (e) {
+            console.error('Failed to save settings.', e);
+        }
+    }
+}
+
+
 class Card {
     constructor(value, suit, faceUp = false) {
         // Check for valid value
@@ -175,6 +248,13 @@ class Pile {
             return this.stack[this.stack.length - 1];
     }
 
+    allowDrag() {
+        return false;
+    }
+    empty(){
+        this.stack = [];
+    }
+
 }
 
 class Tableau extends Pile {
@@ -204,6 +284,7 @@ class Deck extends Pile {
             this.addCard(Card.fromInteger(i));
         }
         this.isShuffled = false;
+        this.suffle=this.shuffle.bind(this);
     }
 
     shuffle() {
@@ -230,7 +311,7 @@ class Deck extends Pile {
                 // wait for the 'card-dealt' event to complete before moving to the next tableau
                 await new Promise(res => new EventSystem().trigger('card-dealt', { from: this, tableau: tableau, callback: res }));
             }
-            // flip the card at tableau i: doing so without invoking a Command here, because this part is undoable! Any flip action resulting from a user moving the cards and revealing a face-down top-card on a slot should invoke Command!
+
             const card = tableaux[i].topCard;
             card.flip();
             // wait for the 'top-card-flipped' event to complete before moving to the next tableau
@@ -245,27 +326,6 @@ class Deck extends Pile {
         await new CommandHistory().executeCommand(new HitCommand(this, waste, numToRemove));
     }
 
-}
-
-
-
-// Command to flip the single top card on a pile
-class FlipTopCardCommand extends Command {
-    constructor(card, pile) {
-        super();
-        this.card = card;
-        this.pile = pile;
-    }
-    async execute() {
-        this.pile.topCard.flip();
-        await new Promise(resolve => {
-            new EventSystem().trigger('top-card-flipped', { card: this.card, pile: this.pile, callback: resolve });
-        });
-    }
-
-    undo() {
-        this.execute();
-    }
 }
 
 // Command to 'hit' card(s) from deck to waste pile
@@ -342,8 +402,8 @@ class Solitaire {
         this.history = new CommandHistory();
         this.eventSystem = new EventSystem();
         this.acceptInput = false;
-        for (let i = 0, j = 0; i < 7; i++, j++) {
-            if (j < 5)
+        for (let i = 0; i < 7; i++) {
+            if (i < 4)
                 this.foundations.push(new Foundation());
             this.tableaux.push(new Tableau());
         }
@@ -358,6 +418,7 @@ class Solitaire {
     }
 
     // initialize the DOM references, tableauxElements and foundationElements should be arrays that correspond to ltr order on the screen (leftmost should have index 0)
+    // No default values for destructuring assignment: make sure DOM elements are properly handled before init'ing.
     initialize({ deckElement, wasteElement, foundationElements, tableauxElements, scoreElement, timerElement }) {
         this.DOM = { deckElement, wasteElement, foundationElements, tableauxElements, scoreElement };
         // add listeners for animations
@@ -369,16 +430,30 @@ class Solitaire {
     newGame({ gameMode, difficulty }) {
         this.gameMode = gameMode;
         this.difficulty = difficulty;
+        this.history.clear();
+        this.waste.empty();
+        this.tableaux.forEach(tableau => tableau.empty());
+        this.foundations.forEach(foundation=>foundation.empty());
+        this.deck = new Deck();
         // Loop over all DOM elements, empty their children
         for (const key of Object.keys(this.DOM)) {
             const element = this.DOM[key];
-            if (Array.isArray(element))
-                element.forEach(subElement => subElement.innerHTML = "");
-            else
+            if (Array.isArray(element)) {
+                element.forEach(subElement => {
+                    for (const child of subElement.children) {
+                        child.remove();
+                    }
+                    subElement.innerHTML = "";
+                });
+            } else {
+                for (const child of element.children) {
+                    child.remove();
+                }
                 element.innerHTML = "";
+            }
         }
         // shuffle deck and add it to DOM
-        this.deck = new Deck();
+
         this.deck.shuffle();
         this.deck.stack.forEach(card => {
             const cardEl = document.createElement('div');
@@ -398,17 +473,16 @@ class Solitaire {
         this.acceptInput = true;
     }
 
-    async undo(){
-        if(this.acceptInput && this.history.history.length){
+    async undo() {
+        if (this.acceptInput && this.history.history.length) {
             this.disableInput();
             await this.history.undo();
             this.enableInput();
         }
-        return;
     }
 
-    async redo(){
-        if(this.acceptInput && this.history.undoStack.length){
+    async redo() {
+        if (this.acceptInput && this.history.undoStack.length) {
             this.disableInput();
             await this.history.redo();
             this.enableInput();
@@ -573,21 +647,21 @@ class Solitaire {
         const target = this.getPileDOM(deck);
         const sourceRect = source.getBoundingClientRect();
         const targetRect = target.getBoundingClientRect();
-        const duration = 100;
+        const duration = 250;
         const options = { duration };
         let promises = [];
-    
+
         const flipAndAnimateCards = () => {
             return new Promise(resolve => {
                 setTimeout(() => {
                     for (const card of source.children) {
                         card.classList.remove('flipping-second-half');
-    
+
                         const keyframes = [
                             { transform: 'translate(0,0)' },
                             { transform: `translate(${targetRect.left - sourceRect.left}px, ${targetRect.top - sourceRect.top}px)` }
                         ];
-    
+
                         const promise = new Promise((resolve) => {
                             const animation = card.animate(keyframes, options);
                             animation.onfinish = () => {
@@ -597,36 +671,41 @@ class Solitaire {
                                 resolve(); // Resolve the promise once the animation is finished
                             };
                         });
-    
+
                         promises.push(promise);
                     }
                     resolve();
                 }, FLIP_DURATION / 2);
             });
         };
-    
+
         const flipCards = (vals) => {
             return new Promise(resolve => {
                 setTimeout(() => {
-                    if(!vals){
+                    if (!vals) {
                         for (const card of source.children) {
                             card.className = '';
                             card.classList.add('card', 'large', 'back', 'flipping-second-half', this.getOnPileClassName(waste));
                         }
-                    }else{
-                        vals.forEach((card,idx)=>{
+                    } else {
+                        vals.forEach((card, idx) => {
                             const cardEl = source.children[idx];
-                            cardEl.classList.remove('back');
-                            cardEl.classList.add(this.getOnPileClassName(deck),card.cssClass, 'flipping-second-half');
+                            if (cardEl) {
+                                cardEl.classList.remove('back');
+                                cardEl.classList.add(this.getOnPileClassName(deck), card.cssClass, 'flipping-second-half');
+                            } else {
+                                console.log('something\'s wrong');
+                            }
+
                         })
                     }
-                    
-    
-                    resolve(flipAndAnimateCards());
+
+
+                    resolve(flipAndAnimateCards(vals));
                 }, FLIP_DURATION / 2);
             });
         };
-        
+
         if (!deck.stack[0].faceUp) {
             for (const card of source.children) {
                 card.classList.add('flipping-first-half');
@@ -634,12 +713,12 @@ class Solitaire {
             await flipCards();
         } else {
             // We're undoing a wasteCollection, and we need to know the ids of the cards.
-            for (const card of target.children){
+            for (const card of target.children) {
                 card.classList.add('flipping-first-half')
             }
             await flipCards(deck.stack);
         }
-    
+
         // Wait for all animations to finish before invoking the callback
         await Promise.all(promises);
         callback();
@@ -671,22 +750,176 @@ const icons = {
     'redo': document.getElementById('redo'),
 };
 const overlay = document.querySelector('.overlay');
+const popup = document.querySelector('.popup');
+const popupHeader = document.querySelector('.popup-header');
+const popupContent = document.querySelector('.popup-content');
+const popupFooter = document.querySelector('.popup-footer');
 const msgbox = document.querySelector('.message-box');
 const newGameBtn = document.getElementById('new-game');
+const difficultyMsg = document.getElementById('difficulty-msg');
+
+/* DYNAMIC CONTENT FOR POP-UP */
+
+// Options
+const optionsHeading = document.createElement('h1');
+optionsHeading.innerText = "OPTIONS";
+const optionsArea = document.createElement('div');
+optionsArea.style.display = 'flex';
+optionsArea.style.justifyContent = 'center';
+optionsArea.style.alignItems = 'stretch';
+optionsArea.id = "options-area";
+
+//vertical-rule
+const vr = document.createElement('div');
+vr.style.display = 'flex';
+vr.style.alignItems = 'center';
+vr.style.margin = '0 20px';
+vr.style.borderLeft = '1px solid white';
+// how do you make a vertical rule on a flex-layout
+// without specifying a fixed height for containers or parents?
+// simple: you use the magic of invisible SVGs :)
+const svgDot = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+svgDot.setAttribute("width", "5");
+svgDot.setAttribute("height", "5");
+svgDot.style.opacity = '0';
+const svgCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+svgCircle.setAttribute("cx", "0.5");
+svgCircle.setAttribute("cy", "0.5");
+svgCircle.setAttribute("r", "0.5");
+svgDot.appendChild(svgCircle);
+vr.appendChild(svgDot);
+
+const gameSettingsArea = document.createElement('div');
+gameSettingsArea.style.display = 'flex';
+gameSettingsArea.style.flexDirection = 'column';
+gameSettingsArea.style.alignItems = 'center';
+gameSettingsArea.style.justifyContent = 'flex-start';
+const soundSettingsArea = document.createElement('div');
+soundSettingsArea.style.display = 'flex';
+soundSettingsArea.style.flexDirection = 'column';
+soundSettingsArea.style.alignItems = 'center';
+soundSettingsArea.style.justifyContent = 'center';
+const gameSettingsHeading = document.createElement('h2');
+gameSettingsHeading.innerText = 'Game Settings';
+gameSettingsHeading.style.textAlign = "center";
+const gameDifficultySelect = document.createElement('select');
+gameDifficultySelect.innerHTML = `
+    <option value="1">Draw-1</option>
+    <option value="3">Draw-3</option>
+`;
+const gameDifficultyContainer = document.createElement('div');
+gameDifficultyContainer.style.display = 'flex';
+gameDifficultyContainer.style.flexDirection = 'column';
+gameDifficultyContainer.style.alignItems = 'center';
+gameDifficultyContainer.style.justifyContent = 'center';
+
+const difficulties = [1, 3];
+difficulties.forEach(difficulty => {
+    const radio = document.createElement('input');
+    radio.type = 'radio';
+    radio.id = `draw-${difficulty}`;
+    radio.name = 'difficulty';
+    radio.value = difficulty
+
+    const label = document.createElement('label');
+    label.innerHTML = `Draw-${difficulty}`;
+    label.htmlFor = `draw-${difficulty}`;
+
+    gameDifficultyContainer.appendChild(label);
+    gameDifficultyContainer.appendChild(radio);
+});
+
+gameSettingsArea.appendChild(gameSettingsHeading);
+gameSettingsArea.appendChild(gameDifficultyContainer);
+
+const soundSettingsHeading = document.createElement('h2');
+soundSettingsHeading.innerText = 'Sound Settings';
+const musicCheckbox = document.createElement('input');
+musicCheckbox.type = 'checkbox';
+musicCheckbox.id = 'musicCheckbox';
+const soundFxCheckbox = document.createElement('input');
+soundFxCheckbox.type = 'checkbox';
+soundFxCheckbox.id = 'soundFxCheckbox';
+const musicLabel = document.createElement('label');
+const sub = document.createElement('sub');
+sub.innerText = "Music will begin downloading when enabled";
+sub.style.textAlign = 'center';
+sub.style.marginTop = '1em';
+musicLabel.innerHTML = 'Enable Music';
+musicLabel.htmlFor = 'musicCheckbox';
+
+const soundFxLabel = document.createElement('label');
+soundFxLabel.innerHTML = 'Enable Sound FX';
+soundFxLabel.htmlFor = 'soundFxCheckbox';
+const musicSlider = document.createElement('input');
+musicSlider.type = 'range';
+musicSlider.value = 50;
+musicSlider.id = 'musicSlider';
+const soundFxSlider = document.createElement('input');
+soundFxSlider.type = 'range';
+soundFxSlider.value = 50;
+soundFxSlider.id = 'soundFxSlider';
+soundSettingsArea.appendChild(soundSettingsHeading);
+soundSettingsArea.appendChild(musicLabel);
+soundSettingsArea.appendChild(musicCheckbox);
+soundSettingsArea.appendChild(musicSlider);
+soundSettingsArea.appendChild(sub);
+
+// for ice-box
+// soundSettingsArea.appendChild(soundFxLabel);
+// soundSettingsArea.appendChild(soundFxCheckbox);
+// soundSettingsArea.appendChild(soundFxSlider);
+
+optionsArea.appendChild(gameSettingsArea);
+optionsArea.appendChild(vr);
+optionsArea.appendChild(soundSettingsArea);
 
 
-/* DOM MANIPULATION */
-function fadeInOutElement(element, show = null, interval = 300) {
+
+
+/* DOM MANIPULATION AND LISTENER FUNCTIONS */
+function fadeInOutElement(element, show = null, interval = 300, display = 'inline-block') {
     if (!element) return;
     let hide = show === null ? element.classList.contains('show') : !show;
     if (hide) {
         element.style.opacity = 0;
-        setTimeout(() => element.classList.remove('show'), interval);
+        setTimeout(() => {
+            element.classList.remove('show');
+            element.style.display = 'none';
+        }, interval);
     } else {
         element.classList.add('show');
+        element.style.display = display;
         setTimeout(() => element.style.opacity = 1, interval);
     }
 }
+
+async function buildOptionsPopup(options) {
+    popupHeader.innerHTML = '';
+    popupContent.innerHTML = '';
+    popupFooter.innerHTML = '';
+    musicCheckbox.checked = options.soundSettings.music_enabled;
+    musicSlider.disabled = !musicCheckbox.checked;
+    popupHeader.append(optionsHeading);
+    popupContent.append(optionsArea);
+    popup.className = "popup";
+    popup.classList.add('options-popup');
+    for (const option of gameDifficultyContainer.children) {
+        if (option.value == options.difficulty) {
+            option.checked = true;
+        } else {
+
+        }
+    }
+}
+
+function optionsPopupClickHandler(evt) {
+    if (evt.target === musicCheckbox) {
+        musicSlider.disabled = !musicCheckbox.checked;
+    }
+}
+
+
 
 /*---- INITIALIZE GAME ----*/
 const gameDOM = {
@@ -701,7 +934,9 @@ solitaire.initialize(gameDOM);
 
 // show beginning game message
 // icebox feature: add game save/load and localStore settings loading here
-solitaire.newGame({ gameMode: 'default', difficulty: 1 });
+const options = GameOptions.LoadLocal();
+difficultyMsg.innerText = `Draw-${options.difficulty}`;
+solitaire.newGame({ gameMode: options.gameMode, difficulty: options.difficulty });
 
 /*---- DOM EVENT LISTENERS ----*/
 
@@ -717,7 +952,7 @@ new EventSystem().listen('game-ended', () => {
     fadeInOutElement(newGameBtn);
     fadeInOutElement(icons.undo, false, 100);
     fadeInOutElement(icons.redo, false, 100);
-})
+});
 
 new EventSystem().listen('history-update', ({ history, undo }) => {
     if (history.length) {
@@ -730,7 +965,7 @@ new EventSystem().listen('history-update', ({ history, undo }) => {
     } else {
         fadeInOutElement(icons.redo, false, 100);
     }
-})
+});
 
 
 
@@ -750,12 +985,19 @@ gameArea.addEventListener('click', async evt => {
         } else if (selfOrParentCheck(evt, "#redo")) {
             if (solitaire.history.undoStack.length)
                 await solitaire.redo();
+        } else if (selfOrParentCheck(evt, '#game-options')) {
+            if (solitaire.acceptInput) {
+                solitaire.disableInput();
+                fadeInOutElement(overlay, true);
+                buildOptionsPopup(options);
+
+            }
         }
     } else if (selfOrParentCheck(evt, 'button')) {
         // we'll handle this here
         if (selfOrParentCheck(evt, '#new-game') && solitaire.acceptInput) {
             new EventSystem().trigger('game-ended');
-            return solitaire.newGame({ gameMode: 'default', difficulty: 1 });
+            return solitaire.newGame({ gameMode: options.gameMode, difficulty: options.difficulty });
         }
     } else {
         // we'll delegate
@@ -763,3 +1005,15 @@ gameArea.addEventListener('click', async evt => {
         return;
     }
 });
+
+overlay.addEventListener('click', evt => {
+    if (selfOrParentCheck(evt, '.options-popup')) {
+        // delegate to options handler
+        return optionsPopupClickHandler(evt);
+    } else if (selfOrParentCheck(evt, '.about-popup')) {
+        // delegate to about handler
+    } else {
+        fadeInOutElement(overlay, false);
+        solitaire.enableInput();
+    }
+})

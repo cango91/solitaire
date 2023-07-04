@@ -205,8 +205,17 @@ body {
 }
 
 
-.card.large.on-waste:not(:only-child):hover {
-    transform: translateX(-15px);
+.card.large.on-waste:not(:only-child):not(:last-child):hover {
+    /* transform: translateX(-15px); */
+    translate: -15px;
+}
+
+.card.large.on-waste:is(:last-child):hover{
+    scale: 1.05;
+}
+
+.card.large.on-waste:hover{
+    scale:  1.1;
 }
 
 /* Show only the top-3 cards on waste pile */
@@ -268,6 +277,8 @@ body {
 .card.large.on-waste:nth-last-child(28):not(:nth-last-child(-n+3)):hover {
     box-shadow: none;
     transform: none;
+    translate: 0;
+    scale: 1;
 }
 
 
