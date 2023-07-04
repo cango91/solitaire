@@ -251,7 +251,7 @@ class Pile {
     allowDrag() {
         return false;
     }
-    empty(){
+    empty() {
         this.stack = [];
     }
 
@@ -284,7 +284,7 @@ class Deck extends Pile {
             this.addCard(Card.fromInteger(i));
         }
         this.isShuffled = false;
-        this.suffle=this.shuffle.bind(this);
+        this.suffle = this.shuffle.bind(this);
     }
 
     shuffle() {
@@ -433,7 +433,7 @@ class Solitaire {
         this.history.clear();
         this.waste.empty();
         this.tableaux.forEach(tableau => tableau.empty());
-        this.foundations.forEach(foundation=>foundation.empty());
+        this.foundations.forEach(foundation => foundation.empty());
         this.deck = new Deck();
         // Loop over all DOM elements, empty their children
         for (const key of Object.keys(this.DOM)) {
@@ -758,9 +758,9 @@ const msgbox = document.querySelector('.message-box');
 const newGameBtn = document.getElementById('new-game');
 const difficultyMsg = document.getElementById('difficulty-msg');
 
-/* DYNAMIC CONTENT FOR POP-UP */
+/*---- DYNAMIC CONTENT FOR POP-UP ----*/
 
-// Options
+// ~~~~Options Popup~~~~
 const optionsHeading = document.createElement('h1');
 optionsHeading.innerText = "OPTIONS";
 const optionsArea = document.createElement('div');
@@ -869,13 +869,34 @@ soundSettingsArea.appendChild(sub);
 // soundSettingsArea.appendChild(soundFxLabel);
 // soundSettingsArea.appendChild(soundFxCheckbox);
 // soundSettingsArea.appendChild(soundFxSlider);
+const btnContainer = document.createElement('div');
+btnContainer.style.display = 'flex';
+btnContainer.style.justifyContent = 'center';
+const applyBtn = document.createElement('button');
+applyBtn.style.backgroundColor = 'lime';
+applyBtn.style.color = 'black';
+applyBtn.innerText = 'Apply';
+const applyAndRestartBtn = document.createElement('button');
+applyAndRestartBtn.style.backgroundColor = 'lime';
+applyAndRestartBtn.style.color = 'black';
+applyAndRestartBtn.innerText = 'Apply & Restart';
+const cancelBtn = document.createElement('button');
+cancelBtn.innerText = 'Cancel';
+cancelBtn.style.backgroundColor = 'orange';
+cancelBtn.style.color = 'black';
+const okBtn = document.createElement('button');
+okBtn.innerText = 'OK';
+btnContainer.appendChild(applyAndRestartBtn);
+btnContainer.appendChild(applyBtn);
+btnContainer.appendChild(okBtn);
+btnContainer.appendChild(cancelBtn);
+
 
 optionsArea.appendChild(gameSettingsArea);
 optionsArea.appendChild(vr);
 optionsArea.appendChild(soundSettingsArea);
 
-
-
+// ~~~~About Popup~~~~
 
 /* DOM MANIPULATION AND LISTENER FUNCTIONS */
 function fadeInOutElement(element, show = null, interval = 300, display = 'inline-block') {
@@ -900,8 +921,8 @@ async function buildOptionsPopup(options) {
     popupFooter.innerHTML = '';
     musicCheckbox.checked = options.soundSettings.music_enabled;
     musicSlider.disabled = !musicCheckbox.checked;
-    popupHeader.append(optionsHeading);
-    popupContent.append(optionsArea);
+    popupHeader.appendChild(optionsHeading);
+    popupContent.appendChild(optionsArea);
     popup.className = "popup";
     popup.classList.add('options-popup');
     for (const option of gameDifficultyContainer.children) {
@@ -911,11 +932,79 @@ async function buildOptionsPopup(options) {
 
         }
     }
+    popupFooter.appendChild(btnContainer);
+    applyAndRestartBtn.style.display = 'none';
+    applyBtn.style.display = 'none';
+    cancelBtn.style.display = 'none';
+    okBtn.style.display = 'inline-block';
 }
 
 function optionsPopupClickHandler(evt) {
+    const newGameOpts = {};
+    const newSoundOpts = {};
+    for (const radio of gameDifficultyContainer.children) {
+        if (radio.tagName === 'INPUT') {
+            if (radio.checked) {
+                newGameOpts.difficulty = radio.value;
+            }
+        }
+    }
+    newSoundOpts.music_enabled = musicCheckbox.checked;
+    newSoundOpts.music_volume = musicSlider.value/100;
+
     if (evt.target === musicCheckbox) {
         musicSlider.disabled = !musicCheckbox.checked;
+    }else if(evt.target === okBtn || evt.target === cancelBtn){
+        fadeInOutElement(overlay, false);
+        solitaire.enableInput();
+    }else if(evt.target === applyBtn){
+        // TODO: make GameOptions class validate settings and apply
+        fadeInOutElement(overlay, false);
+        solitaire.enableInput();
+    }else if(evt.target===applyAndRestartBtn){
+        new EventSystem().trigger('game-canceled');
+        options.difficulty = newGameOpts.difficulty;
+        fadeInOutElement(overlay, false);
+        difficultyMsg.innerText = `Draw-${options.difficulty}`;
+        fadeInOutElement(msgbox,true);
+        fadeInOutElement(newGameBtn,false)
+        return solitaire.newGame({ gameMode: options.gameMode, difficulty: options.difficulty });
+    }
+
+    // Choose which buttons we should display/hide
+    let requiresRestart = false;
+    let requiresApply = false;
+    for (const key in newGameOpts) {
+        if (newGameOpts[key] != options[key]) {
+            requiresRestart = true;
+            break;
+        }
+    }
+    if (!requiresRestart) {
+        for (let key in newSoundOpts) {
+            if (newSoundOpts[key] != options.soundSettings[key]) {
+                requiresApply = true;
+                break;
+            }
+        }
+    }
+
+    // Show/hide appropriate buttons
+    if (!requiresApply && !requiresRestart) {
+        okBtn.style.display = 'inline-block';
+        applyAndRestartBtn.style.display = 'none';
+        cancelBtn.style.display = 'none';
+        applyBtn.style.display = 'none';
+    }else if(requiresRestart){
+        okBtn.style.display = 'none';
+        applyAndRestartBtn.style.display = 'inline-block';
+        cancelBtn.style.display = 'inline-block';
+        applyBtn.style.display = 'none';
+    }else{
+        okBtn.style.display = 'none';
+        applyAndRestartBtn.style.display = 'none';
+        cancelBtn.style.display = 'inline-block';
+        applyBtn.style.display = 'inline-block';
     }
 }
 
