@@ -396,6 +396,31 @@ class MoveCards extends Command {
 
 class Solitaire {
     constructor() {
+        // BIND THIS MOFO! I HATE THIS I HATE THIS I HATE THIS I HATE THIS!!!!!!!!!!!!!!!!!
+        // Javascript is just pretending to be Object Oriented -.-
+        this.renderCardDealt = this.renderCardDealt.bind(this);
+        this.renderFlipCard = this.renderFlipCard.bind(this);
+        this.getTableauDOM = this.getTableauDOM.bind(this);
+        this.getFoundationDOM = this.getFoundationDOM.bind(this);
+        this.getPileDOM = this.getPileDOM.bind(this);
+        this.renderWasteCollected = this.renderWasteCollected.bind(this);
+        this.renderState = this.renderState.bind(this);
+        this.clearDOM = this.clearDOM.bind(this);
+        this.buildGameObjects = this.buildGameObjects.bind(this);
+        this.buildGameObjects();
+    }
+
+    // initialize the DOM references, tableauxElements and foundationElements should be arrays that correspond to ltr order on the screen (leftmost should have index 0)
+    // No default values for destructuring assignment: make sure DOM elements are properly handled before init'ing.
+    initialize({ deckElement, wasteElement, foundationElements, tableauxElements, scoreElement }) {
+        this.DOM = { deckElement, wasteElement, foundationElements, tableauxElements, scoreElement };
+        // add listeners for animations
+        this.eventSystem.listen('card-dealt', this.renderCardDealt);
+        this.eventSystem.listen('top-card-flipped', this.renderFlipCard);
+        this.eventSystem.listen('waste-collected', this.renderWasteCollected);
+    }
+
+    buildGameObjects(){
         this.waste = new Waste();
         this.foundations = [];
         this.tableaux = [];
@@ -407,53 +432,16 @@ class Solitaire {
                 this.foundations.push(new Foundation());
             this.tableaux.push(new Tableau());
         }
-        // BIND THIS MOFO! I HATE THIS I HATE THIS I HATE THIS I HATE THIS!!!!!!!!!!!!!!!!!
-        // Javascript is just pretending to be Object Oriented -.-
-        this.renderCardDealt = this.renderCardDealt.bind(this);
-        this.renderFlipCard = this.renderFlipCard.bind(this);
-        this.getTableauDOM = this.getTableauDOM.bind(this);
-        this.getFoundationDOM = this.getFoundationDOM.bind(this);
-        this.getPileDOM = this.getPileDOM.bind(this);
-        this.renderWasteCollected = this.renderWasteCollected.bind(this);
-    }
-
-    // initialize the DOM references, tableauxElements and foundationElements should be arrays that correspond to ltr order on the screen (leftmost should have index 0)
-    // No default values for destructuring assignment: make sure DOM elements are properly handled before init'ing.
-    initialize({ deckElement, wasteElement, foundationElements, tableauxElements, scoreElement, timerElement }) {
-        this.DOM = { deckElement, wasteElement, foundationElements, tableauxElements, scoreElement };
-        // add listeners for animations
-        this.eventSystem.listen('card-dealt', this.renderCardDealt);
-        this.eventSystem.listen('top-card-flipped', this.renderFlipCard);
-        this.eventSystem.listen('waste-collected', this.renderWasteCollected);
+        this.deck = new Deck();
     }
 
     newGame({ gameMode, difficulty }) {
         this.gameMode = gameMode;
         this.difficulty = difficulty;
+        this.buildGameObjects();
         this.history.clear();
-        this.waste.empty();
-        this.tableaux.forEach(tableau => tableau.empty());
-        this.foundations.forEach(foundation => foundation.empty());
-        this.deck = new Deck();
-        // Loop over all DOM elements, empty their children
-        for (const key of Object.keys(this.DOM)) {
-            const element = this.DOM[key];
-            if (Array.isArray(element)) {
-                element.forEach(subElement => {
-                    for (const child of subElement.children) {
-                        child.remove();
-                    }
-                    subElement.innerHTML = "";
-                });
-            } else {
-                for (const child of element.children) {
-                    child.remove();
-                }
-                element.innerHTML = "";
-            }
-        }
+        this.clearDOM();
         // shuffle deck and add it to DOM
-
         this.deck.shuffle();
         this.deck.stack.forEach(card => {
             const cardEl = document.createElement('div');
@@ -573,6 +561,58 @@ class Solitaire {
 
     getOnPileClassName(pile) {
         return pile instanceof Tableau ? 'on-tableau' : pile instanceof Waste ? 'on-waste' : pile instanceof Foundation ? 'on-foundation' : pile instanceof Deck ? 'deck' : '';
+    }
+
+    clearDOM() {
+        // Loop over all DOM elements, remove their children
+        for (const key of Object.keys(this.DOM)) {
+            const element = this.DOM[key];
+            if (Array.isArray(element)) {
+                element.forEach(subElement => {
+                    for (const child of subElement.children) {
+                        child.remove();
+                    }
+                    subElement.innerHTML = "";
+                });
+            } else {
+                for (const child of element.children) {
+                    child.remove();
+                }
+                element.innerHTML = "";
+            }
+        }
+    }
+
+    renderState({ callback }) {
+        this.clearDOM();
+        // Add game objects' contents to DOM
+        this.deck.stack.forEach(card => {
+            const cardEl = document.createElement('div');
+            cardEl.classList.add('card', 'large', 'deck', card.faceUp ? card.cssClass : 'back');
+            this.DOM.deckElement.append(cardEl);
+        });
+        this.waste.stack.forEach(card => {
+            const cardEl = document.createElement('div');
+            cardEl.classList.add('card', 'large', 'on-waste', card.faceUp ? card.cssClass : 'back');
+            this.DOM.wasteElement.append(cardEl);
+        });
+        this.foundations.forEach(foundation => {
+            const foundationEl = this.getPileDOM(foundation);
+            foundation.stack.forEach(card => {
+                const cardEl = document.createElement('div');
+                cardEl.classList.add('card', 'large', 'on-foundation', card.faceUp ? card.cssClass : 'back');
+                foundationEl.append(cardEl);
+            });
+        });
+        this.tableaux.forEach(tableau => {
+            const tableauEl = this.getPileDOM(tableau);
+            tableau.stack.forEach(card => {
+                const cardEl = document.createElement('div');
+                cardEl.classList.add('card', 'large', 'on-tableau', card.faceUp ? card.cssClass : 'back');
+                tableauEl.append(cardEl);
+            });
+        });
+        if (callback) callback();
     }
 
     // animation functions.
@@ -962,12 +1002,10 @@ function optionsPopupClickHandler(evt) {
         fadeInOutElement(overlay, false);
         solitaire.enableInput();
     }else if(evt.target===applyAndRestartBtn){
-        new EventSystem().trigger('game-canceled');
+        new EventSystem().trigger('game-ended');
         options.difficulty = newGameOpts.difficulty;
         fadeInOutElement(overlay, false);
         difficultyMsg.innerText = `Draw-${options.difficulty}`;
-        fadeInOutElement(msgbox,true);
-        fadeInOutElement(newGameBtn,false)
         return solitaire.newGame({ gameMode: options.gameMode, difficulty: options.difficulty });
     }
 
@@ -1033,12 +1071,12 @@ solitaire.newGame({ gameMode: options.gameMode, difficulty: options.difficulty }
 msgbox.classList.add('show');
 
 new EventSystem().listen('game-begun', () => {
-    fadeInOutElement(msgbox);
-    fadeInOutElement(newGameBtn);
+    fadeInOutElement(msgbox,false);
+    fadeInOutElement(newGameBtn,true);
 });
 new EventSystem().listen('game-ended', () => {
-    fadeInOutElement(msgbox);
-    fadeInOutElement(newGameBtn);
+    fadeInOutElement(msgbox,true);
+    fadeInOutElement(newGameBtn,false);
     fadeInOutElement(icons.undo, false, 100);
     fadeInOutElement(icons.redo, false, 100);
 });
