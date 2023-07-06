@@ -198,7 +198,7 @@ export default class Renderer {
         const stackEl = pileElem.querySelectorAll(`.card:nth-last-child(-n+${numCards})`);
         const slice = stack.slice(-numCards);
         if (this.enableAnimations) {
-            // use .map to  _animateFlipCard on all nodes of stackEl
+            // use .map to  _animateFlipCard on all nodes of stackEl, creating an array of Promises
             // return a promise that resolves when all _animateFlipCard promises are resolved
             const animations = Array.from(stackEl).map((element, index) => {
                 return this._animateFlipCard(element, slice[index], this.animationSpeeds.flipDuration);
@@ -243,6 +243,7 @@ export default class Renderer {
                     element.classList.add('back');
                     element.classList.remove(card.cssClass);
                 }
+                element.draggable = card.isDraggable;
                 element.animate(stage2,options).onfinish = () => res();
             }
         });
