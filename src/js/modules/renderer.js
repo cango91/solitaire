@@ -34,6 +34,7 @@ export default class Renderer {
         this.renderFlipNCardsAtPile = this.renderFlipNCardsAtPile.bind(this);
         this.renderFlipTopCardAtPile = this.renderFlipTopCardAtPile.bind(this);
         this.renderFlipPile = this.renderFlipPile.bind(this);
+        this.renderMoveCards = this.renderMoveCards.bind(this);
     }
 
     configureSettings(
@@ -41,7 +42,7 @@ export default class Renderer {
             enableAnimations = true,
             animationSpeeds = {} = {
                 flipDuration: FLIP_DURATION,
-                dealSpeed: DEAL_SPEED,
+                moveSpeed: MOVE_SPEED,
                 wasteDuration: WASTE_DURATION
             }
         } = {}) {
@@ -88,12 +89,17 @@ export default class Renderer {
         eventSystem.remove('game-initialized');
         eventSystem.remove('move-card');
         eventSystem.remove('flip-top-card-at-pile');
+        eventSystem.remove('flip-top-n-cards-at-pile');
+        eventSystem.remove('move-cards');
+
     }
 
     attachListeners() {
         eventSystem.listen('game-initialized', this.renderInitialState);
         eventSystem.listen('move-card', this.renderMoveCard);
+        eventSystem.listen('move-cards', this.renderMoveCards);
         eventSystem.listen('flip-top-card-at-pile', this.renderFlipTopCardAtPile);
+        eventSystem.listen('flip-top-n-cards-at-pile', this.renderFlipNCardsAtPile);
     }
 
     renderInitialState({ deck, callback }) {
@@ -170,16 +176,67 @@ export default class Renderer {
                     .then(() => {
                         target.append(cardEl);
                         this.decorateCardWithPile(cardEl, toPile);
-                        callback();
+                        if (callback) callback();
                         res();
                     })
                     .catch(err => console.log(err));
             });
         } else {
-            target.append(cardEl);
+            target.appendChild(cardEl);
             this.decorateCardWithPile(cardEl, toPile);
-            callback();
+            if (callback) callback();
         }
+    }
+
+
+    renderMoveCards({ cardsPile, fromPile, toPile, callback }) {
+        const stack = this._getCorrectPileState(cardsPile).stack;
+
+        //const _moveEl = this._makeMovePile(...cardsPile)
+        if (this.enableAnimations) {
+            const source = this.getDOM(fromPile);
+            const target = this.getDOM(toPile);
+            const stackEl = stack.map(card => {
+                let cardEl = this._makeCardElement(card);
+                const classArray = Array.from(cardEl.classList);
+                cardEl = source.querySelector(`.${classArray.join('.')}:last-of-type`);
+                source.removeChild(cardEl);
+                return cardEl;
+            });
+            const toEl = target.childElementCount > 0 ? target.lastElementChild : target;
+            const animations = Array.from(stackEl).map(cardEl => this._animateMoveElement(cardEl, null, toEl, this.animationSpeeds.moveSpeed));
+            return Promise.all(animations).then(() => {
+                stackEl.forEach(card => {
+                    target.appendChild(card);
+                    this.decorateCardWithPile(card, toPile);
+                });
+                if (callback) callback();
+            });
+
+            //const moveEl = this._makeMovePile(stackEl);
+            //source.appendChild(moveEl);
+            // const toEl = target.childElementCount > 0 ? target.lastElementChild : target;
+            // return new Promise(res => {
+            //     this._animateMoveElement(moveEl, null, toEl, this.animationSpeeds.moveSpeed)
+            //         .then(() => {
+            //             [...moveEl.children].forEach(cardEl => {
+            //                 target.appendChild(cardEl);
+            //                 this.decorateCardWithPile(cardEl, toPile);
+            //             });
+            //             if (callback) callback();
+            //             res();
+            //         })
+            // });
+
+        } else {
+            const moves = stack.map((card) => {
+                return new Promise(res => this.renderMoveCard({ card: card, fromPile, toPile, callback: res }));
+            });
+            return Promise.all(moves).then(() => {
+                if (callback) callback();
+            });
+        }
+
     }
 
     renderFlipPile({ pile, callback }) {
@@ -204,7 +261,7 @@ export default class Renderer {
                 return this._animateFlipCard(element, slice[index], this.animationSpeeds.flipDuration);
             });
             return Promise.all(animations).then(() => {
-                callback();
+                if (callback) callback();
             });
         } else {
             stackEl.forEach((card, idx) => {
@@ -217,8 +274,16 @@ export default class Renderer {
                 }
                 card.draggable = slice[idx].isDraggable
             });
-            callback();
+            if (callback) callback();
         }
+    }
+
+    _makeMovePile(elems) {
+        const movePile = document.createElement('div');
+        movePile.classList.add('slot', 'tableau');
+        movePile.style.border = 'none';
+        elems.forEach(elem => movePile.appendChild(elem));
+        return movePile;
     }
 
     _animateFlipCard(element, card, speed) {
@@ -234,17 +299,17 @@ export default class Renderer {
         ];
         let duration = speed / 2;
         let options = { duration };
-        return new Promise(res=>{
-            element.animate(stage1,options).onfinish = () =>{
-                if(card.faceUp){
+        return new Promise(res => {
+            element.animate(stage1, options).onfinish = () => {
+                if (card.faceUp) {
                     element.classList.remove('back');
                     element.classList.add(card.cssClass);
-                }else{
+                } else {
                     element.classList.add('back');
                     element.classList.remove(card.cssClass);
                 }
                 element.draggable = card.isDraggable;
-                element.animate(stage2,options).onfinish = () => res();
+                element.animate(stage2, options).onfinish = () => res();
             }
         });
     }

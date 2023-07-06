@@ -32,6 +32,7 @@ renderer.initializeGameDOM(
         tableauxElements: tableaux
     });
 renderer.startRendering();
+renderer.configureSettings({enableAnimations:false});
 const solitaire = new Solitaire();
 solitaire.initialize();
 
@@ -60,3 +61,4 @@ window.Solitaire = Solitaire;
 window.Renderer = Renderer;
 window.renderer = renderer;
 window.references = { deckSlot, wasteSlot, foundations, tableaux };
+window.solitaire = solitaire;

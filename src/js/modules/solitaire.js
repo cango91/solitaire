@@ -1,3 +1,4 @@
+import HitCommand from "./commands/hitCommand.js";
 import eventSystem from "./eventSystem.js";
 import { Pile, Waste, Deck, Tableau, Foundation } from "./piles.js";
 
@@ -7,7 +8,8 @@ export default class Solitaire {
         this.buildDataObjects = this.buildDataObjects.bind(this);
         this.clearHistory = this.clearHistory.bind(this);
         this.onDeckHit = this.onDeckHit.bind(this);
-        
+        this.undo = this.undo.bind(this);
+        this.executeCommand = this.executeCommand.bind(this);
     }
 
     initialize(
@@ -21,7 +23,7 @@ export default class Solitaire {
         this.gameSettings.scoring = scoring;
         this.clearHistory();
         this.buildDataObjects();
-        
+
         this.deck.generateCards();
         this.deck.shuffle();
 
@@ -48,7 +50,10 @@ export default class Solitaire {
     }
 
     async executeCommand(command) {
-        await command.execute();
+        await new Promise(res=>{
+            command.execute();
+            res();
+        });
         this.history.push(command);
         this.undoStack = [];
         eventSystem.trigger('history-update', { action: 'executeCommand', history: this.history, undo: this.undoStack });
@@ -84,6 +89,11 @@ export default class Solitaire {
         // if deck is full, it means we deal
         if (this.deck.stack.length === 52) {
             await this._deal();
+        // if deck is not empty, it means we hit to waste
+        }else if(this.deck.stack.length>0){
+            const numToHit = Math.min(this.deck.stack.length,this.gameSettings.difficulty);
+            const hitCmd = new HitCommand(this.deck,this.waste,numToHit);
+            await this.executeCommand(hitCmd);
         }
     }
 

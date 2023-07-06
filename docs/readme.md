@@ -21,7 +21,7 @@ Below features are not expected to be finished by MVP, but will be solid additio
 + Game Options: Change animation speed
 ## Pseudo-code
 ```javascript
-/*
+
 // ----- CLASSES ----- //
 class DataObject{
     // abstract class that all data-holding game objects (a.k.a. Card, Deck, Tableaux, Waste, Foundations) extend this class.
@@ -32,8 +32,13 @@ class DataObject{
 class GameOptions {
     // Class to store user settings
     // Methods to validate settings on change
-    XX~~Render method to render options screen~~XX
-    // Dedicated renderer added
+```
+
+~~`//Render method to render options screen`~~
+
+ Dedicated Renderer class added
+
+```js
 }
 class Card {
     // Static fields will hold suite and color "coding"
@@ -53,16 +58,18 @@ class CommandHistory{
     // Class to store Commands and enable undo/redo action
     // Should work with promises to observe and wait for UI changes
 }`~~
+
 Command execution, history, undo, redo are now handled by `Solitaire` class.
 ```js
-/*
+
 class EventSystem{
     // A class to separate DOM manipulation and animation concerns from game logic
     // When a state change occurs through an action or command, they should notify the event system, which will call their registered listeners for DOM manipulation
     // Singleton
 }
-/*
+
 class Deck {
+    /*
     XX~~Empty constructor will fill a deck with 52 cards~~XX
     // constructor no longer fills with cards
     // generateCards() will fill the deck
@@ -77,6 +84,7 @@ class Deck {
     +doesn't assume about cards leaving it
     XX~~hit(n) => remove n top-down cards (game difficulty) - undoable~~XX
     // No longer Deck's responsibility. It has member methods to return cards from its top, but removing and 
+    */
 }
 
 class Pile{
@@ -122,11 +130,11 @@ class Renderer{
 // Declare and initialize DOM reference const's necessary for rendering of above objects
 // Attach event listeners to relavant DOM variables.
 // Create gameOptions and solitaire objects, call necessary functions.
-// (If type="module" is used for whatever reason) expose a window.DebuggingObject to contain any functions and variables needed to interact from console
+// (If type="module" is used for whatever reason - i.e. increasing complexity) expose a window.DebuggingObject to contain any functions and variables needed to interact from console
 
 // main.js will act as bootstrapper and controller
 // Solitaire will serve as the main logic/data layer, coordinating other classes with events and commands, whereas Renderer is responsible for all rendering through listening to events
-*/
+
 ```
 ## Refactored Architecture
 ![software architecture](./events/architecture.drawio.svg)

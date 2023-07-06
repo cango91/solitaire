@@ -88,7 +88,7 @@ export class Waste extends Pile {
     static FromSnapshot(snapshot) {
         const waste = new this();
         waste.stack = super.FromSnapshot(snapshot).stack;
-        waste.topCard.isDraggable = true;
+        if(waste.topCard) waste.topCard.isDraggable = true;
         return waste;
     }
 
