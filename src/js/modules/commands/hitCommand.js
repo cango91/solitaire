@@ -23,7 +23,7 @@ export default class HitCommand extends Command {
         }
         return new Promise(res => eventSystem.trigger('move-cards', { action: "hit", cardsPile: movedCards.snapshot(), fromPile: this.deck.snapshot(), toPile: this.waste.snapshot(), callback: res }))
             .then(async () => {
-                await new Promise(res => eventSystem.trigger('flip-top-n-cards-at-pile', { action: "hit", pile: this.waste.snapshot(), numCards: this.numHit }));
+                await new Promise(res => eventSystem.trigger('flip-top-n-cards-at-pile', { action: "hit", pile: this.waste.snapshot(), numCards: this.numHit, callback:res}));
             });
     }
 

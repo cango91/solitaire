@@ -1,8 +1,10 @@
+import CollectWastePileCommand from "./commands/collectWastePileCommand.js";
 import HitCommand from "./commands/hitCommand.js";
 import eventSystem from "./eventSystem.js";
 import { Pile, Waste, Deck, Tableau, Foundation } from "./piles.js";
 
 export default class Solitaire {
+    acceptInput;
     constructor() {
         this.gameSettings = {};
         this.buildDataObjects = this.buildDataObjects.bind(this);
@@ -33,8 +35,8 @@ export default class Solitaire {
         eventSystem.remove('pile-dragged');
 
         eventSystem.listen('deck-clicked', this.onDeckHit);
-
         eventSystem.trigger('game-initialized', { settings: this.gameSettings, deck: this.deck.snapshot() });
+        this._enableInputs();
     }
 
     buildDataObjects() {
@@ -50,7 +52,7 @@ export default class Solitaire {
     }
 
     async executeCommand(command) {
-        await new Promise(res=>{
+        await new Promise(res => {
             command.execute();
             res();
         });
@@ -86,15 +88,21 @@ export default class Solitaire {
     //---- GAME EVENT HANDLING ----//
 
     async onDeckHit() {
+        if (!this.acceptInput) return
         // if deck is full, it means we deal
+        this._disableInputs();
         if (this.deck.stack.length === 52) {
             await this._deal();
         // if deck is not empty, it means we hit to waste
-        }else if(this.deck.stack.length>0){
-            const numToHit = Math.min(this.deck.stack.length,this.gameSettings.difficulty);
-            const hitCmd = new HitCommand(this.deck,this.waste,numToHit);
+        } else if (this.deck.stack.length > 0) {
+            const numToHit = Math.min(this.deck.stack.length, this.gameSettings.difficulty);
+            const hitCmd = new HitCommand(this.deck, this.waste, numToHit);
             await this.executeCommand(hitCmd);
+        } else if (!this.deck.stack.length && this.waste.stack.length) {
+            const collectCmd = new CollectWastePileCommand(this.waste, this.deck);
+            await this.executeCommand(collectCmd);
         }
+        this._enableInputs();
     }
 
     async _deal() {
@@ -112,13 +120,20 @@ export default class Solitaire {
                     }));
             }
             this.tableaux[i].revealTopCard();
-            await new Promise(res=>eventSystem.trigger('flip-top-card-at-pile',
-            {
-                action: 'deal',
-                pile: this.tableaux[i].snapshot(),
-                callback: res
-            }));
+            await new Promise(res => eventSystem.trigger('flip-top-card-at-pile',
+                {
+                    action: 'deal',
+                    pile: this.tableaux[i].snapshot(),
+                    callback: res
+                }));
         }
+    }
+
+    _disableInputs() {
+        this.acceptInput = false;
+    }
+    _enableInputs() {
+        this.acceptInput = true;
     }
 
 

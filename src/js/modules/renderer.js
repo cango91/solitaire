@@ -4,7 +4,7 @@ import { Pile, Waste, Tableau, Foundation, Deck } from './piles.js'
 // Define flipping animation duration in ms, should match CSS
 let FLIP_DURATION = 150;
 // Define card deal speed in px/sec
-let MOVE_SPEED = 10000;
+let MOVE_SPEED = 3000;
 // Define how long it takes to move pile from waste to deck in ms
 let WASTE_DURATION = 100;
 
@@ -91,6 +91,7 @@ export default class Renderer {
         eventSystem.remove('flip-top-card-at-pile');
         eventSystem.remove('flip-top-n-cards-at-pile');
         eventSystem.remove('move-cards');
+        eventSystem.remove('flip-pile');
 
     }
 
@@ -100,6 +101,7 @@ export default class Renderer {
         eventSystem.listen('move-cards', this.renderMoveCards);
         eventSystem.listen('flip-top-card-at-pile', this.renderFlipTopCardAtPile);
         eventSystem.listen('flip-top-n-cards-at-pile', this.renderFlipNCardsAtPile);
+        eventSystem.listen('flip-pile', this.renderFlipPile);
     }
 
     renderInitialState({ deck, callback }) {
@@ -164,60 +166,36 @@ export default class Renderer {
 
 
     renderMoveCard({ card, fromPile, toPile, callback }) {
-        const source = this.getDOM(fromPile);
-        const target = this.getDOM(toPile);
-        let cardEl = this._makeCardElement(card);
-        const classArray = Array.from(cardEl.classList);
-        cardEl = source.querySelector(`.${classArray.join('.')}:last-of-type`);
-        if (this.enableAnimations) {
-            return new Promise(res => {
-                const toEl = target.childElementCount > 0 ? target.lastElementChild : target;
-                this._animateMoveElement(cardEl, null, toEl, this.animationSpeeds.moveSpeed)
-                    .then(() => {
-                        target.append(cardEl);
-                        this.decorateCardWithPile(cardEl, toPile);
-                        if (callback) callback();
-                        res();
-                    })
-                    .catch(err => console.log(err));
-            });
-        } else {
-            target.appendChild(cardEl);
-            this.decorateCardWithPile(cardEl, toPile);
-            if (callback) callback();
-        }
+        const pile = this._getCorrectPileState(fromPile);
+        pile.addCard(Card.FromSnapshot(card));
+        pile.stack = pile.stack.slice(-1);
+        return this.renderMoveCards({cardsPile: pile.snapshot(),fromPile,toPile,callback});
     }
 
 
-    renderMoveCards({ cardsPile, fromPile, toPile, callback }) {
-        const stack = this._getCorrectPileState(cardsPile).stack;
-        const source = this.getDOM(fromPile);
-        const target = this.getDOM(toPile);
-        const stackEl = stack.map(card => {
-            let cardEl = this._makeCardElement(card);
-            const classArray = Array.from(cardEl.classList);
-            cardEl = source.querySelector(`.${classArray.join('.')}:last-of-type`);
-            source.removeChild(cardEl);
-            return cardEl;
-        });
 
+    renderMoveCards({ cardsPile, fromPile, toPile, callback }) {
         if (this.enableAnimations) {
-            const toEl = target.childElementCount > 0 ? target.lastElementChild : target;
-            const animations = Array.from(stackEl).map(cardEl => this._animateMoveElement(cardEl, null, toEl, this.animationSpeeds.moveSpeed));
-            return Promise.all(animations).then(() => {
-                stackEl.forEach(card => {
-                    target.appendChild(card);
-                    this.decorateCardWithPile(card, toPile);
-                });
-                if (callback) callback();
+            return new Promise(async res => {
+                const source = this._rebuildPileDOM(fromPile);
+                const moveStack = this._getCorrectPileState(cardsPile).stack.map(card => this.decorateCardWithPile(this._makeCardElement(card), fromPile));
+                moveStack.forEach(cardEl => source.appendChild(cardEl));
+
+                const animations = moveStack.map(cardEl => this._animateMoveElement(cardEl, null, this.getDOM(toPile), this.animationSpeeds.moveSpeed));
+                await Promise.all(animations)
+                    .then(() => {
+                        this._rebuildPileDOM(fromPile);
+                        this._rebuildPileDOM(toPile)
+                        if (callback) callback();
+                        res();
+                    });
             });
         } else {
-            Array.from(stackEl).forEach(card=>{
-                target.appendChild(card);
-                this.decorateCardWithPile(card,toPile);
-            });
-            if(callback) callback();
+            this._rebuildPileDOM(fromPile);
+            this._rebuildPileDOM(toPile);
+            if (callback) callback();
         }
+
     }
 
     renderFlipPile({ pile, callback }) {
@@ -241,8 +219,11 @@ export default class Renderer {
             const animations = Array.from(stackEl).map((element, index) => {
                 return this._animateFlipCard(element, slice[index], this.animationSpeeds.flipDuration);
             });
-            return Promise.all(animations).then(() => {
-                if (callback) callback();
+            return new Promise(async resolve => {
+                await Promise.all(animations).then(() => {
+                    if (callback) callback();
+                    resolve();
+                });
             });
         } else {
             Array.from(stackEl).forEach((card, idx) => {
@@ -295,6 +276,16 @@ export default class Renderer {
         });
     }
 
+    _rebuildPileDOM(pile) {
+        const pileDOM = this.getDOM(pile);
+        const truthPile = this._getCorrectPileState(pile);
+        this.removeAllChildren(pileDOM);
+        truthPile.stack.forEach(card => {
+            pileDOM.append(this.decorateCardWithPile(this._makeCardElement(card), pile));
+        });
+        return pileDOM;
+    }
+
     _getCorrectPileState(pile) {
         switch (Pile.FromSnapshot(pile).name) {
             case Deck.name:
@@ -333,8 +324,8 @@ export default class Renderer {
         ];
         const distance = Math.sqrt(deltaX ** 2 + deltaY ** 2);
         const duration = (distance / speed) * 1000; // convert to ms
-        let options = { duration };
-        await new Promise(res => {
+        let options = { duration, fill: 'forwards' };
+        return await new Promise(res => {
             element.animate(keyframes, options).onfinish = () => {
                 element.style = '';
                 res();
