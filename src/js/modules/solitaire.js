@@ -21,6 +21,8 @@ export default class Solitaire {
         this.gameSettings.scoring = scoring;
         this.clearHistory();
         this.buildDataObjects();
+        
+        this.deck.generateCards();
         this.deck.shuffle();
 
         //clear & register event listeners

@@ -4,7 +4,7 @@ import { Pile, Waste, Tableau, Foundation, Deck } from './piles.js'
 // Define flipping animation duration in ms, should match CSS
 let FLIP_DURATION = 300;
 // Define card deal speed in px/sec
-let DEAL_SPEED = 10000;
+let MOVE_SPEED = 10000;
 // Define how long it takes to move pile from waste to deck in ms
 let WASTE_DURATION = 100;
 
@@ -13,7 +13,7 @@ export default class Renderer {
         enableAnimations = true,
         animationSpeeds = {} = {
             flipDuration: FLIP_DURATION,
-            dealSpeed: DEAL_SPEED,
+            moveSpeed: MOVE_SPEED,
             wasteDuration: WASTE_DURATION
         } } = {}) {
         this.enableAnimations = enableAnimations;
@@ -120,19 +120,91 @@ export default class Renderer {
         }
     }
 
+    decorateCardWithPile(cardElement, pile, ...extraClasses) {
+        let classDecoration;
+        switch (Pile.FromSnapshot(pile).name) {
+            case Deck.name:
+                classDecoration = 'deck';
+                break;
+            case Waste.name:
+                classDecoration = 'on-waste';
+                break;
+            case Tableau.name:
+                classDecoration = 'on-tableau';
+                break;
+            case Foundation.name:
+                classDecoration = 'on-foundation';
+                break;
+            default:
+                classDecoration = '';
+                break;
+        }
+        const classArray = Array.from(cardElement.classList);
+        const removeArray = ['on-foundation', 'on-tableau', 'deck', 'on-waste'];
+        if (classDecoration)
+            removeArray.splice(removeArray.findIndex(cls => cls === classDecoration), 1);
+        const classDecorations = classArray.filter(cls => !removeArray.includes(cls));
+        if (classDecoration && !classDecorations.includes(classDecoration))
+            classDecorations.push(classDecoration);
+        cardElement.className = '';
+        if (classDecorations.length || extraClasses.length)
+            cardElement.classList.add(...classDecorations, ...extraClasses);
+        return cardElement;
+    }
+
+
     renderMoveCard({ card, fromPile, toPile, callback }) {
         const source = this.getDOM(fromPile);
         const target = this.getDOM(toPile);
         let cardEl = this._makeCardElement(card);
         const classArray = Array.from(cardEl.classList);
         cardEl = source.querySelector(`.${classArray.join('.')}:last-of-type`);
-        callback();
+        if (this.enableAnimations) {
+            return new Promise(res => {
+                const toEl = target.childElementCount > 0 ? target.lastElementChild : target;
+                this._animateElement(cardEl, null, toEl, this.animationSpeeds.moveSpeed)
+                .then(()=>{
+                    target.append(cardEl);
+                    this.decorateCardWithPile(cardEl, toPile);
+                    callback();
+                    res();
+                })
+                .catch(err=>console.log(err));
+                
+            });
+        } else {
+            target.append(cardEl);
+            this.decorateCardWithPile(cardEl, toPile);
+            callback();
+        }
+        
     }
 
     _addCard(toElem, card, ...additional_class) {
         const cardEl = this._makeCardElement(card, ...additional_class);
         toElem.append(cardEl);
         return cardEl;
+    }
+
+    async _animateElement(element, fromElement, toElement, speed) {
+        const elementRect = element.getBoundingClientRect();
+        const fromRect = fromElement ? fromElement.getBoundingClientRect() : elementRect;
+        const toRect = toElement.getBoundingClientRect();
+        let initialTop = fromRect.top;
+        let initialLeft = fromRect.left;
+        element.style.zIndex = 50;
+        let keyframes = [
+            { transform: 'translate(0,0)' },
+            { transform: `translate(${toRect.left - initialLeft}px, ${toRect.top - initialTop}px)` }
+        ];
+        let duration = Math.sqrt((toRect.left - initialLeft) ** 2 + (toRect.top - initialTop) ** 2) / speed * 1000;
+        let options = { duration };
+        await new Promise(res => {
+            element.animate(keyframes, options).onfinish = () => {
+                element.style='';
+                res();
+            };
+        });
     }
 
     _makeCardElement(card, ...additional_class) {

@@ -5,7 +5,7 @@ export class Pile extends DataObject {
     constructor() {
         super();
         this.stack = [];
-        //this.snapshot = this.snapshot.bind(this);
+        this.snapshot = this.snapshot.bind(this);
         this.mayAcceptDrop = false;
         this.idx = null;
     }
@@ -156,12 +156,15 @@ export class Foundation extends Pile {
 export class Deck extends Pile {
     constructor() {
         super();
+        this.shuffle = this.shuffle.bind(this);
+    }
+
+    generateCards(){
         // create 52 cards and store them
         for (let i = 0; i < 52; i++) {
             this.addCard(Card.fromInteger(((i % 13) << 3) | (i % 4) << 1));
         }
         this.isShuffled = false;
-        this.shuffle = this.shuffle.bind(this);
     }
 
     addCard(card){

@@ -40,6 +40,9 @@ test("Foundation functionality", () => {
 
 test("Deck functionality", () => {
     const deck = new Deck();
+    expect(deck.stack.length).toBe(0);
+    
+    deck.generateCards();
     expect(deck.stack.length).toBe(52);
 
     const initialSnapshot = deck.snapshot();
@@ -111,6 +114,7 @@ test("Waste snapshot functionality", () => {
 
 test("Deck card assumptions", () => {
     const deck = new Deck();
+    deck.generateCards();
     const card = new Card(2, "hearts", true);
 
     deck.addCard(card);
