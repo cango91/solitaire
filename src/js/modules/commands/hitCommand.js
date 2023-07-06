@@ -21,25 +21,25 @@ export default class HitCommand extends Command {
             this.waste.addCard(card);
             numToRemove--;
         }
-        return new Promise(res => eventSystem.trigger('move-cards', { cardsPile: movedCards.snapshot(), fromPile: this.deck.snapshot(), toPile: this.waste.snapshot(), callback: res }))
+        return new Promise(res => eventSystem.trigger('move-cards', { action: "hit", cardsPile: movedCards.snapshot(), fromPile: this.deck.snapshot(), toPile: this.waste.snapshot(), callback: res }))
             .then(async () => {
-                await new Promise(res => eventSystem.trigger('flip-top-n-cards-at-pile', { pile: this.waste.snapshot(), numCards: this.numHit }));
+                await new Promise(res => eventSystem.trigger('flip-top-n-cards-at-pile', { action: "hit", pile: this.waste.snapshot(), numCards: this.numHit }));
             });
     }
 
     async undo() {
         let numToRemove = this.numHit;
-        this.movedCards = new Pile();
+        const movedCards = new Pile();
         while (numToRemove) {
             let card = this.waste.removeTopCard();
-            this.movedCards.addCard(Card.FromSnapshot(card.snapshot()));
+            movedCards.addCard(Card.FromSnapshot(card.snapshot()));
             card.faceUp = false;
             this.deck.addCard(card);
             numToRemove--;
         }
-        return new Promise(res => eventSystem.trigger('move-cards', { cardsPile: this.movedCards.snapshot(), fromPile: this.waste.snapshot(), toPile: this.deck.snapshot(), callback: res }))
+        return new Promise(res => eventSystem.trigger('move-cards', { action: "undo-hit", cardsPile: movedCards.snapshot(), fromPile: this.waste.snapshot(), toPile: this.deck.snapshot(), callback: res }))
             .then(async () => {
-                await new Promise(res => eventSystem.trigger('flip-top-n-cards-at-pile', { pile: this.deck.snapshot(), numCards: this.numHit, callback: res }) )
+                await new Promise(res => eventSystem.trigger('flip-top-n-cards-at-pile', { action: "undo-hit", pile: this.deck.snapshot(), numCards: this.numHit, callback: res }))
             });
     }
 }

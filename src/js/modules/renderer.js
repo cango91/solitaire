@@ -191,18 +191,17 @@ export default class Renderer {
 
     renderMoveCards({ cardsPile, fromPile, toPile, callback }) {
         const stack = this._getCorrectPileState(cardsPile).stack;
+        const source = this.getDOM(fromPile);
+        const target = this.getDOM(toPile);
+        const stackEl = stack.map(card => {
+            let cardEl = this._makeCardElement(card);
+            const classArray = Array.from(cardEl.classList);
+            cardEl = source.querySelector(`.${classArray.join('.')}:last-of-type`);
+            source.removeChild(cardEl);
+            return cardEl;
+        });
 
-        //const _moveEl = this._makeMovePile(...cardsPile)
         if (this.enableAnimations) {
-            const source = this.getDOM(fromPile);
-            const target = this.getDOM(toPile);
-            const stackEl = stack.map(card => {
-                let cardEl = this._makeCardElement(card);
-                const classArray = Array.from(cardEl.classList);
-                cardEl = source.querySelector(`.${classArray.join('.')}:last-of-type`);
-                source.removeChild(cardEl);
-                return cardEl;
-            });
             const toEl = target.childElementCount > 0 ? target.lastElementChild : target;
             const animations = Array.from(stackEl).map(cardEl => this._animateMoveElement(cardEl, null, toEl, this.animationSpeeds.moveSpeed));
             return Promise.all(animations).then(() => {
@@ -212,31 +211,13 @@ export default class Renderer {
                 });
                 if (callback) callback();
             });
-
-            //const moveEl = this._makeMovePile(stackEl);
-            //source.appendChild(moveEl);
-            // const toEl = target.childElementCount > 0 ? target.lastElementChild : target;
-            // return new Promise(res => {
-            //     this._animateMoveElement(moveEl, null, toEl, this.animationSpeeds.moveSpeed)
-            //         .then(() => {
-            //             [...moveEl.children].forEach(cardEl => {
-            //                 target.appendChild(cardEl);
-            //                 this.decorateCardWithPile(cardEl, toPile);
-            //             });
-            //             if (callback) callback();
-            //             res();
-            //         })
-            // });
-
         } else {
-            const moves = stack.map((card) => {
-                return new Promise(res => this.renderMoveCard({ card: card, fromPile, toPile, callback: res }));
+            Array.from(stackEl).forEach(card=>{
+                target.appendChild(card);
+                this.decorateCardWithPile(card,toPile);
             });
-            return Promise.all(moves).then(() => {
-                if (callback) callback();
-            });
+            if(callback) callback();
         }
-
     }
 
     renderFlipPile({ pile, callback }) {
@@ -264,7 +245,7 @@ export default class Renderer {
                 if (callback) callback();
             });
         } else {
-            stackEl.forEach((card, idx) => {
+            Array.from(stackEl).forEach((card, idx) => {
                 if (slice[idx].faceUp) {
                     card.classList.remove('back');
                     card.classList.add(slice[idx].cssClass);
