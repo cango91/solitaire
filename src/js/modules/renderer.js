@@ -2,7 +2,7 @@ import eventSystem from "./eventSystem.js";
 import { Pile, Waste, Tableau, Foundation, Deck } from './piles.js'
 
 // Define flipping animation duration in ms, should match CSS
-let FLIP_DURATION = 300;
+let FLIP_DURATION = 150;
 // Define card deal speed in px/sec
 let MOVE_SPEED = 10000;
 // Define how long it takes to move pile from waste to deck in ms
@@ -10,7 +10,7 @@ let WASTE_DURATION = 100;
 
 export default class Renderer {
     constructor({
-        enableAnimations = false,
+        enableAnimations = true,
         animationSpeeds = {} = {
             flipDuration: FLIP_DURATION,
             moveSpeed: MOVE_SPEED,
@@ -198,7 +198,14 @@ export default class Renderer {
         const stackEl = pileElem.querySelectorAll(`.card:nth-last-child(-n+${numCards})`);
         const slice = stack.slice(-numCards);
         if (this.enableAnimations) {
-            
+            // use .map to  _animateFlipCard on all nodes of stackEl
+            // return a promise that resolves when all _animateFlipCard promises are resolved
+            const animations = Array.from(stackEl).map((element, index) => {
+                return this._animateFlipCard(element, slice[index], this.animationSpeeds.flipDuration);
+            });
+            return Promise.all(animations).then(() => {
+                callback();
+            });
         } else {
             stackEl.forEach((card, idx) => {
                 if (slice[idx].faceUp) {
@@ -212,6 +219,33 @@ export default class Renderer {
             });
             callback();
         }
+    }
+
+    _animateFlipCard(element, card, speed) {
+        // 2 stages: first just rotate 90deg's
+        // then rotate from -90 to 0 (because the cards are asymettrical, doing a 180deg turn creates a mirroring effect)
+        let stage1 = [
+            { transform: 'rotateY(0deg)' },
+            { transform: 'rotateY(90deg)' }
+        ];
+        let stage2 = [
+            { transform: 'rotateY(-90deg)' },
+            { transform: 'rotateY(0deg)' },
+        ];
+        let duration = speed / 2;
+        let options = { duration };
+        return new Promise(res=>{
+            element.animate(stage1,options).onfinish = () =>{
+                if(card.faceUp){
+                    element.classList.remove('back');
+                    element.classList.add(card.cssClass);
+                }else{
+                    element.classList.add('back');
+                    element.classList.remove(card.cssClass);
+                }
+                element.animate(stage2,options).onfinish = () => res();
+            }
+        });
     }
 
     _getCorrectPileState(pile) {

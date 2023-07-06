@@ -504,35 +504,3 @@ body {
     display: block;
     transition: opacity 0.3s ease-in-out;
 }
-
-
-.card.flipping-first-half {
-    animation: flip-1 0.15s ease-in-out;
-}
-
-.card.flipping-second-half {
-    animation: flip-2 0.15s ease-in-out;
-
-}
-
-
-
-@keyframes flip-1 {
-    from {
-        transform: rotateY(0deg);
-    }
-
-    to {
-        transform: rotateY(90deg);
-    }
-}
-
-@keyframes flip-2 {
-    from {
-        transform: rotateY(-90deg);
-    }
-
-    to {
-        transform: rotateY(0deg);
-    }
-}

@@ -18,7 +18,10 @@ tableaux.sort((a, b) => Number(a.id.substring(a.id.length - 1)) > Number(b.id.su
 foundations.sort((a, b) => Number(a.id.substring(a.id.length - 1)) > Number(b.id.substring(b.id.length - 1)));
 
 
-
+// conveneince function for checking those pesky sub-elements that get clicked on all the time
+function selfOrParentCheck(event, parentSelector) {
+    return event.target.matches(`${parentSelector}, ${parentSelector} *`);
+}
 
 const renderer = new Renderer();
 renderer.initializeGameDOM(
@@ -33,12 +36,16 @@ const solitaire = new Solitaire();
 solitaire.initialize();
 
 
+// drag controllers
 gameArea.addEventListener('dragstart',(evt)=>{
-    console.log(evt);
+
 })
 
+// click controllers
 gameArea.addEventListener('click',(evt)=>{
-    
+    if(selfOrParentCheck(evt,'#deck-slot')){
+        solitaire.onDeckHit();
+    }
 })
 
 
