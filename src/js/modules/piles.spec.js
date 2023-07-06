@@ -170,7 +170,7 @@ test("Waste card assumptions", () => {
     expect(card.isDraggable).toBe(false); // card is not the top card anymore
 });
 
-test("Pile FromSnapshot successfully reconstructs name and idx", () => {
+test("Pile.FromSnapshot successfully reconstructs name and idx", () => {
     const waste = new Waste();
     const tableau = new Tableau(1);
     const deck = new Deck();
@@ -189,4 +189,53 @@ test("Pile FromSnapshot successfully reconstructs name and idx", () => {
     expect(pileDeck.name).toBe(Deck.name);
     expect(pileFoundation.name).toBe(Foundation.name);
     expect(pileFoundation.idx).toBe(foundation.idx);
+});
+
+test("Pile.FromSnapshot can inform about ascendants' deck length", ()=>{
+    const deck = new Deck();
+    deck.generateCards();
+    deck.shuffle();
+    const snapshot = deck.snapshot();
+    
+    const pile = Pile.FromSnapshot(snapshot);
+    expect(pile.stack.length).toBe(deck.stack.length);
+});
+
+test("Pile.FromSnapshot can inform about stack order of its descendants", ()=>{
+    const deck = new Deck();
+    deck.generateCards();
+    deck.shuffle();
+    const snapshot = deck.snapshot();
+    
+    const pile = Pile.FromSnapshot(snapshot);
+    pile.stack.forEach((card,idx)=>{
+        expect(card.value).toBe(deck.stack[idx].value);
+        expect(card.suit.value).toBe(deck.stack[idx].suit.value);
+        expect(!!card.faceUp).toBe(!!deck.stack[idx].faceUp);
+    });
+});
+
+test("Pile.FromSnapshot can inform about faceUp of all its descendants' cards", ()=>{
+    const deck = new Deck();
+    const waste = new Waste();
+    const tableau = new Tableau(2);
+    const foundation = new Foundation(1);
+    deck.generateCards();
+    deck.shuffle();
+    waste.addCard(deck.removeTopCard());
+    waste.addCard(deck.removeTopCard());
+    tableau.addCard(deck.removeTopCard());
+    tableau.addCard(deck.removeTopCard());
+    foundation.addCard(deck.removeTopCard());
+    foundation.addCard(deck.removeTopCard());
+    
+    const wastePile = Pile.FromSnapshot(waste.snapshot());
+    const tabPile = Pile.FromSnapshot(tableau.snapshot());
+    const foundPile = Pile.FromSnapshot(foundation.snapshot());
+    for(let i=0;i<2;i++){
+        expect(!!wastePile.stack[i].faceUp).toBe(!!waste.stack[i].faceUp);
+        expect(!!tabPile.stack[i].faceUp).toBe(!!tableau.stack[i].faceUp);
+        expect(!!foundPile.stack[i].faceUp).toBe(!!foundation.stack[i].faceUp);
+    }
+
 });

@@ -10,7 +10,7 @@ let WASTE_DURATION = 100;
 
 export default class Renderer {
     constructor({
-        enableAnimations = true,
+        enableAnimations = false,
         animationSpeeds = {} = {
             flipDuration: FLIP_DURATION,
             moveSpeed: MOVE_SPEED,
@@ -31,6 +31,9 @@ export default class Renderer {
         this.renderInitialState = this.renderInitialState.bind(this);
         this.getDOM = this.getDOM.bind(this);
         this.renderMoveCard = this.renderMoveCard.bind(this);
+        this.renderFlipNCardsAtPile = this.renderFlipNCardsAtPile.bind(this);
+        this.renderFlipTopCardAtPile = this.renderFlipTopCardAtPile.bind(this);
+        this.renderFlipPile = this.renderFlipPile.bind(this);
     }
 
     configureSettings(
@@ -90,7 +93,7 @@ export default class Renderer {
     attachListeners() {
         eventSystem.listen('game-initialized', this.renderInitialState);
         eventSystem.listen('move-card', this.renderMoveCard);
-        // eventSystem.listen('flip-top-card-at-pile');
+        eventSystem.listen('flip-top-card-at-pile', this.renderFlipTopCardAtPile);
     }
 
     renderInitialState({ deck, callback }) {
@@ -139,6 +142,7 @@ export default class Renderer {
                 classDecoration = '';
                 break;
         }
+
         const classArray = Array.from(cardElement.classList);
         const removeArray = ['on-foundation', 'on-tableau', 'deck', 'on-waste'];
         if (classDecoration)
@@ -162,23 +166,70 @@ export default class Renderer {
         if (this.enableAnimations) {
             return new Promise(res => {
                 const toEl = target.childElementCount > 0 ? target.lastElementChild : target;
-                this._animateElement(cardEl, null, toEl, this.animationSpeeds.moveSpeed)
-                .then(()=>{
-                    target.append(cardEl);
-                    this.decorateCardWithPile(cardEl, toPile);
-                    callback();
-                    res();
-                })
-                .catch(err=>console.log(err));
-                
+                this._animateMoveElement(cardEl, null, toEl, this.animationSpeeds.moveSpeed)
+                    .then(() => {
+                        target.append(cardEl);
+                        this.decorateCardWithPile(cardEl, toPile);
+                        callback();
+                        res();
+                    })
+                    .catch(err => console.log(err));
             });
         } else {
             target.append(cardEl);
             this.decorateCardWithPile(cardEl, toPile);
             callback();
         }
-        
     }
+
+    renderFlipPile({ pile, callback }) {
+        let numCards = Pile.FromSnapshot(pile).stack.length;
+        return this.renderFlipNCardsAtPile({ pile, numCards, callback });
+    }
+
+
+    renderFlipTopCardAtPile({ pile, callback }) {
+        return this.renderFlipNCardsAtPile({ pile, numCards: 1, callback });
+    }
+
+    renderFlipNCardsAtPile({ pile, numCards, callback }) {
+        const pileElem = this.getDOM(pile);
+        const stack = this._getCorrectPileState(pile).stack;
+        const stackEl = pileElem.querySelectorAll(`.card:nth-last-child(-n+${numCards})`);
+        const slice = stack.slice(-numCards);
+        if (this.enableAnimations) {
+            
+        } else {
+            stackEl.forEach((card, idx) => {
+                if (slice[idx].faceUp) {
+                    card.classList.remove('back');
+                    card.classList.add(slice[idx].cssClass);
+                } else {
+                    card.classList.add('back');
+                    card.classList.remove(slice[idx].cssClass);
+                }
+                card.draggable = slice[idx].isDraggable
+            });
+            callback();
+        }
+    }
+
+    _getCorrectPileState(pile) {
+        switch (Pile.FromSnapshot(pile).name) {
+            case Deck.name:
+                return Deck.FromSnapshot(pile);
+            case Tableau.name:
+                return Tableau.FromSnapshot(pile);
+            case Foundation.name:
+                return Foundation.FromSnapshot(pile);
+            case Waste.name:
+                return Waste.FromSnapshot(pile);
+            default:
+                return Pile.FromSnapshot(pile);
+        }
+    }
+
+
 
     _addCard(toElem, card, ...additional_class) {
         const cardEl = this._makeCardElement(card, ...additional_class);
@@ -186,26 +237,29 @@ export default class Renderer {
         return cardEl;
     }
 
-    async _animateElement(element, fromElement, toElement, speed) {
+    async _animateMoveElement(element, fromElement, toElement, speed) {
         const elementRect = element.getBoundingClientRect();
         const fromRect = fromElement ? fromElement.getBoundingClientRect() : elementRect;
         const toRect = toElement.getBoundingClientRect();
         let initialTop = fromRect.top;
         let initialLeft = fromRect.left;
         element.style.zIndex = 50;
+        const deltaX = toRect.left - initialLeft;
+        const deltaY = toRect.top - initialTop;
         let keyframes = [
             { transform: 'translate(0,0)' },
-            { transform: `translate(${toRect.left - initialLeft}px, ${toRect.top - initialTop}px)` }
+            { transform: `translate(${deltaX}px, ${deltaY}px)` }
         ];
-        let duration = Math.sqrt((toRect.left - initialLeft) ** 2 + (toRect.top - initialTop) ** 2) / speed * 1000;
+        const distance = Math.sqrt(deltaX ** 2 + deltaY ** 2);
+        const duration = (distance / speed) * 1000; // convert to ms
         let options = { duration };
         await new Promise(res => {
             element.animate(keyframes, options).onfinish = () => {
-                element.style='';
+                element.style = '';
                 res();
             };
         });
-    }
+    };
 
     _makeCardElement(card, ...additional_class) {
         const cardEl = document.createElement('div');

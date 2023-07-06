@@ -17,9 +17,8 @@ document.querySelectorAll('.foundation').forEach(foundation => foundations.push(
 tableaux.sort((a, b) => Number(a.id.substring(a.id.length - 1)) > Number(b.id.substring(b.id.length - 1)));
 foundations.sort((a, b) => Number(a.id.substring(a.id.length - 1)) > Number(b.id.substring(b.id.length - 1)));
 
-gameArea.addEventListener('drag',(evt)=>{
-    console.log(evt);
-})
+
+
 
 const renderer = new Renderer();
 renderer.initializeGameDOM(
@@ -30,6 +29,18 @@ renderer.initializeGameDOM(
         tableauxElements: tableaux
     });
 renderer.startRendering();
+const solitaire = new Solitaire();
+solitaire.initialize();
+
+
+gameArea.addEventListener('dragstart',(evt)=>{
+    console.log(evt);
+})
+
+gameArea.addEventListener('click',(evt)=>{
+    
+})
+
 
 
 //---- DEBUGGING -----//
