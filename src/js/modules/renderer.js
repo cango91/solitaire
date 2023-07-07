@@ -13,7 +13,6 @@ export default class Renderer {
     constructor(settings = {}) {
 
         this.configureSettings(settings);
-
         this.gameDOM = {};
         this.gameDOM.tableauxElements = [];
         this.gameDOM.foundationElements = [];
@@ -34,6 +33,8 @@ export default class Renderer {
         this._renderDragStart = this._renderDragStart.bind(this);
         this._dragUpdate = this._dragUpdate.bind(this);
         this.renderValidDragOverPile = this.renderValidDragOverPile.bind(this);
+        this.renderInvalidDragOverPile = this.renderInvalidDragOverPile.bind(this);
+        this._removeFeedback = this._removeFeedback.bind(this);
 
     }
 
@@ -102,6 +103,8 @@ export default class Renderer {
         eventSystem.remove('validated-drag-start-pile');
         eventSystem.remove('valid-drag-over-pile');
         eventSystem.remove('invalid-drag-over-pile');
+        eventSystem.remove('drag-update');
+        eventSystem.remove('drag-over-bg');
 
     }
 
@@ -117,6 +120,7 @@ export default class Renderer {
         eventSystem.listen('valid-drag-over-pile', this.renderValidDragOverPile);
         eventSystem.listen('invalid-drag-over-pile', this.renderInvalidDragOverPile);
         eventSystem.listen('drag-update', this._dragUpdate);
+        eventSystem.listen('drag-over-bg', this._removeFeedback)
 
     }
 
@@ -182,11 +186,11 @@ export default class Renderer {
     }
 
     renderValidDragOverPile(data) {
-        this._repaintDragImage('valid', data);
+        this._repaintDraggedImage('valid');
     }
 
     renderInvalidDragOverPile(data) {
-
+        this._repaintDraggedImage('invalid');
     }
 
     renderDragStartCard(data) {
@@ -199,13 +203,15 @@ export default class Renderer {
 
     _renderDragStart({ card, fromPile, cardIdx, evt }) {
         const pileDOM = this.getDOM(fromPile);
-        evt.dataTransfer.setDragImage(this.gameDOM.fakeDragDiv, 99999, 0);
+        this.gameDOM.fakeDragDiv.draggable = true;
+        evt.dataTransfer.setDragImage(this.gameDOM.fakeDragDiv, 0, 0);
         const pileContainer = document.createElement('div');
+        pileContainer.draggable = false;
         pileContainer.style.position = 'fixed';
         pileContainer.style.transition = 'none';
-        pileContainer.style.left = `$calc(${evt.clientX}px - 2em)`;
-        pileContainer.style.top = `$calc(${evt.clientY}px - 2.25em)`;
         pileContainer.className = 'clone-pile';
+        pileContainer.style.left = `${evt.clientX - 65}px`;
+        pileContainer.style.top = `${evt.clientY - 59}px`;
         const pileOfCards = Array.from(pileDOM.children).slice(cardIdx);
         pileOfCards.forEach((c, idx) => {
             const clone = c.cloneNode(true);
@@ -221,6 +227,7 @@ export default class Renderer {
             clone.classList.remove('on-waste');
             clone.classList.remove('on-foundation');
             clone.classList.add('on-tableau');
+            clone.draggable = false;
             pileContainer.appendChild(clone);
         });
         document.body.appendChild(pileContainer);
@@ -461,29 +468,34 @@ export default class Renderer {
         return cardEl;
     }
 
-    _repaintDragImage(cls, { evt }) {
-        const dragElement = document.querySelector('.clone-pile') || document.querySelector('.dragged');
-        if (!dragElement) console.error('Drag element not found');
-        if (dragElement.childElementCount) {
-            console.log('yo');
-        } else {
-            let originalTransition = dragElement.style.transition;
-            dragElement.classList.remove('invalid');
-            dragElement.classList.add('valid');
-            dragElement.style.transition = 'none';
-            dragElement.style.top = `calc(${evt.clientY}px - 2.25em)`;
-            dragElement.style.left = `calc(${evt.clientX}px - 2em)`;
-            dragElement.style.opacity = 1;
-            dragElement.style.zIndex = 5000;
-            let rect = dragElement.getBoundingClientRect();
-            evt.dataTransfer.setDragImage(dragElement, evt.clientX - rect.left, evt.clientY - rect.top);
+    _repaintDraggedImage(cls) {
+        if (!this.gameDOM.dragElement) console.error('Drag element not found');
 
-
+        for (let child of this.gameDOM.dragElement.children) {
+            child.classList.remove('invalid');
+            child.classList.remove('valid');
+            child.classList.add(cls);
         }
     }
 
-    _dragUpdate({ evt }) {
-        this.gameDOM.dragElement.style.left = evt.clientX + 'px';
-        this.gameDOM.dragElement.style.top = evt.clientY + 'px';
+    _dragUpdate({ x, y }) {
+        this.gameDOM.dragElement.style.left = `${x - 65}px`;
+        this.gameDOM.dragElement.style.top = `${y - 59}px`;
     }
+
+    _removeFeedback() {
+        if (this.feedbackDragOver) {
+            // remove all feedback classes from standing piles
+
+        }
+
+        if (this.feedbackDragged) {
+            // remove all valid/invalid classes from the dragged pile
+            for (let child of this.gameDOM.dragElement.children) {
+                child.classList.remove('valid');
+                child.classList.remove('invalid');
+            }
+        }
+    }
+
 }

@@ -23,10 +23,10 @@
     --button-bg: #6AA2BD;
     --button-border: whitesmoke;
 
-    --drag-border-size: 3px;
+    --drag-border-size: 5px;
 
     --drag-border-valid: #5CBE8E;
-    --drag-border-invalid: chocolate;
+    --drag-border-invalid: #ff0000;
 }
 
 html {
@@ -168,6 +168,7 @@ body {
     width: 4.0em;
     height: 5.5em;
     font-size: 26px;
+    pointer-events: none;
 }
 
 
@@ -352,6 +353,7 @@ body {
 .slot .card:not(.back).feedback.invalid,
 .card.dragged.invalid{
     border-color: var(--drag-border-invalid);
+    cursor: no-drop;
 }
 
 .slot .card:not(.back).feedback{

@@ -11,19 +11,7 @@
 </head>
 
 <body>
-    <div class="overlay">
-        <div class="popup">
-            <div class="popup-header">
-                <h1>HEADING</h1>
-            </div>
-            <div class="popup-content">
-                <p>Content</p>
-            </div>
-            <div class="popup-footer">
-                <button>OK</button>
-            </div>
-        </div>
-    </div>
+    
     <div class="game-container">
         <div class="header">
             <div class="icon" id="game-options">
@@ -80,7 +68,20 @@
             <sub>(Or click the icons on top-right to change settings or to learn how-to-play)</sub>
             <h3>Difficulty: <small><span id="difficulty-msg"></span></small> </h3>
         </div>
-        <div id="fake-drag">&nbsp;</div>
+        <div id="fake-drag" draggable="true" style="opacity: 1; width:10px;">&nbsp;ll</div>
+        <div class="overlay">
+            <div class="popup">
+                <div class="popup-header">
+                    <h1>HEADING</h1>
+                </div>
+                <div class="popup-content">
+                    <p>Content</p>
+                </div>
+                <div class="popup-footer">
+                    <button>OK</button>
+                </div>
+            </div>
+        </div>
     </div>
     </div>
 </body>

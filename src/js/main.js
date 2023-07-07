@@ -94,12 +94,6 @@ solitaire.initialize();
 
 
 // drag controllers
-
-function dragHandler(evt){
-    evt.preventDefault();
-    eventSystem.trigger('drag-update',{evt});
-}
-
 gameArea.addEventListener('dragstart', (evt) => {
     if (selfOrParentCheck(evt, ".foundation")
         || selfOrParentCheck(evt, "#waste-slot")
@@ -111,11 +105,19 @@ gameArea.addEventListener('dragstart', (evt) => {
             fromPile: evt.target.parentNode.id,
             eventData: evt
         });
-        evt.target.addEventListener('drag',dragHandler);
+        evt.dataTransfer.effectAllowed = "none";
     }
 });
 
+gameArea.addEventListener('drag', (evt)=>{
+    eventSystem.trigger('drag-update',{
+        x: evt.clientX,
+        y: evt.clientY
+    })
+});
+
 gameArea.addEventListener('dragover', (evt) => {
+    evt.preventDefault();
     if (selfOrParentCheck(evt, ".foundation")
         || selfOrParentCheck(evt, ".tableau")
         || selfOrParentCheck(evt, '.on-tableau')
@@ -125,12 +127,27 @@ gameArea.addEventListener('dragover', (evt) => {
             overPile: evt.target.parentNode.id ? evt.target.parentNode.id : evt.target.id, // if foundation or tableau is empty, i.e. has no children
             eventData: evt
         });
+    }else{
+        eventSystem.trigger('drag-over-bg');
     }
 });
 
-gameArea.addEventListener('dragend', (evt) => {
+// tableaux[0].addEventListener('dragover', evt => {
+//     evt.preventDefault();
+//     // evt.dataTransfer.dropEffect = 'move';
+//     console.log('dragged over');
+// })
+// tableaux[0].addEventListener('dragenter', evt => {
+//     console.log('enter')
 
-});
+// })
+// tableaux[0].addEventListener('dragleave', evt => {
+//     console.log('leave')
+// })
+// tableaux[0].addEventListener('drop', evt => {
+//     evt.preventDefault();
+//     console.log('dropped on foundation 1')
+// })
 
 // click controllers
 gameArea.addEventListener('click', (evt) => {
