@@ -1,3 +1,4 @@
+import Card from "./card.js";
 import eventSystem from "./eventSystem.js";
 import { Pile, Waste, Tableau, Foundation, Deck } from './piles.js'
 
@@ -170,26 +171,67 @@ export default class Renderer {
         return cardElement;
     }
 
-    renderDragStartCard({ card, fromPile, cardIdx, dataTransfer }) {
+    renderDragStartCard({ card, fromPile, cardIdx, evt }) {
         const pileDOM = this.getDOM(fromPile);
-        const draggedCardEl = this._makeCardElement(Card.FromSnapshot(card), 'dragged', 'pile-head','on-tableau');
-        const cardElAtPile = Array.from(pileDOM.children)[cardIdx];
-        cardElAtPile.style.opacity = 0;
-        const fakeDiv = document.createElement('div');
-        //fakeDiv.className = 'pile-clone';
-        fakeDiv.classList.add('clone-pile');
-        fakeDiv.style.position = 'fixed';
-        fakeDiv.style.pointerEvents = 'none';
-        fakeDiv.style.opacity = 1;
-        fakeDiv.style.zIndex = 1000;
-        fakeDiv.style.left = `${dataTransfer.clientX}px`;
-        fakeDiv.style.top = `${dataTransfer.clientY}px`;
-        fakeDiv.appendChild(draggedCardEl);
-        fakeDiv.appendChild(this._makeCardElement(new Card(12,'h',true),'dragged','pile-end','on-tableau'))
-        document.body.appendChild(fakeDiv);
-        let rect = fakeDiv.getBoundingClientRect();
-        dataTransfer.dataTransfer.setDragImage(fakeDiv, dataTransfer.clientX - rect.left, dataTransfer.clientY - rect.top)
-        setTimeout(()=>fakeDiv.style.opacity=0,1)
+        const draggedCard = this._makeCardElement(Card.FromSnapshot(card), 'dragged', 'pile-head', 'pile-end');
+        const cardToHide = Array.from(pileDOM.children)[cardIdx];
+        cardToHide.style.opacity = 0;
+        draggedCard.style.position = 'fixed';
+        draggedCard.style.pointerEvents = 'none';
+        draggedCard.style.zIndex = '1000';
+        draggedCard.style.left = `calc(${evt.clientX}px - 2em)`;
+        draggedCard.style.top = `calc(${evt.clientY}px - 2.25em)`;
+        document.body.appendChild(draggedCard);
+        let rect = draggedCard.getBoundingClientRect();
+        evt.dataTransfer.setDragImage(draggedCard, evt.clientX - rect.left, evt.clientY - rect.top);
+        setTimeout(() => draggedCard.style.opacity = 0, 1);
+    }
+
+    renderDragStartPile({ card, fromPile, cardIdx, evt }) {
+        const pileDOM = this.getDOM(fromPile);
+        const pileOfCards = Array.from(pileDOM.children).slice(cardIdx);
+        const pileContainer = document.createElement('div');
+        pileContainer.className = 'clone-pile';
+        pileContainer.style.position = 'fixed';
+        pileContainer.style.pointerEvents = 'none';
+        pileContainer.style.zIndex = 1000;
+        pileOfCards.forEach((c,idx) => {
+            const clone = c.cloneNode(true);
+            clone.classList.add('dragged','on-tableau');
+            if(idx===0)
+                clone.classList.add('pile-head');
+            if(idx === pileOfCards.length-1)
+                clone.classList.add('pile-end');
+            c.style.opacity = 0;
+            pileContainer.appendChild(clone);
+        });
+        document.body.appendChild(pileContainer);
+        let rect = pileContainer.getBoundingClientRect();
+        pileContainer.style.left = `$calc(${evt.clientX}px - 2em)`;
+        pileContainer.style.top = `$calc(${evt.clientY}px - 2em)`;
+        evt.dataTransfer.setDragImage(pileContainer,evt.clientX-rect.left,evt.clientY-rect.top);
+        setTimeout(()=>{
+            Array.from(pileContainer.children).forEach(clone => clone.opacity=0);
+        },1);
+
+        // cardElAtPile.style.opacity = 0;
+        // const fakeDiv = document.createElement('div');
+        // //fakeDiv.className = 'pile-clone';
+        // fakeDiv.classList.add('clone-pile');
+        // fakeDiv.style.position = 'fixed';
+        // fakeDiv.style.pointerEvents = 'none';
+        // fakeDiv.style.opacity = 1;
+        // fakeDiv.style.zIndex = 1000;
+        // fakeDiv.style.left = `${evt.clientX}px`;
+        // fakeDiv.style.top = `${evt.clientY}px`;
+        // fakeDiv.appendChild(draggedCardEl);
+        // fakeDiv.appendChild(this._makeCardElement(new Card(12, 'h', true), 'dragged', 'pile-end', 'on-tableau'))
+        // document.body.appendChild(fakeDiv);
+        // let rect = fakeDiv.getBoundingClientRect();
+        // evt.dataTransfer.setDragImage(fakeDiv, evt.clientX - rect.left, evt.clientY - rect.top);
+        // setTimeout(() => fakeDiv.style.opacity = 0, 1);
+
+
         //console.log(fakeDiv);   
         //fakeDiv.style.opacity = 0;
         // draggedCardEl.style.position = 'fixed';

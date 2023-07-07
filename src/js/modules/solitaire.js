@@ -112,7 +112,7 @@ export default class Solitaire {
                         card: card.snapshot(),
                         fromPile: this.waste.snapshot(),
                         cardIdx, 
-                        dataTransfer: eventData
+                        evt: eventData
                     });
                 break;
             case 'f':
@@ -127,7 +127,7 @@ export default class Solitaire {
                         fromPile: foundation.snapshot(),
                         cardIdx,
                         foundationIdx,
-                        dataTransfer: eventData
+                        evt: eventData
                     });
                 break;
             case 't':
@@ -142,7 +142,7 @@ export default class Solitaire {
                         fromPile: tableau.snapshot(),
                         cardIdx,
                         tableauIdx,
-                        dataTransfer: eventData
+                        evt: eventData
                     });
                 break;
             default:

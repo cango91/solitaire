@@ -45,54 +45,9 @@ function getChildIdx(parentElement, childElement) {
     return Array.from(parentElement.children).indexOf(childElement);
 }
 
-function throttle(func, delay) {
-    let lastCall = 0;
-    return function (...args) {
-        const now = new Date().getTime();
-        if (now - lastCall < delay) {
-            return;
-        }
-        lastCall = now;
-        return func(...args);
-    }
-}
-// let lastX = 0, lastY = 0, el;;
-// function dragHandler(evt) {
-//     evt.preventDefault();
-//     if (!el) el = document.getElementById('draggedElement');
-//     if (el) {
-
-//         // const newX = evt.clientX;
-//         // const newY = evt.clientY;
-
-//         // // Only update the position if it has actually changed
-//         // if (newX !== lastX || newY !== lastY) {
-//         //     lastX = newX;
-//         //     lastY = newY;
-
-//         // Request a frame to update the position
-//         requestAnimationFrame(() => {
-//             el.style.left = `${evt.clientX}px`;
-//             el.style.top = `${evt.clientY}px`;
-//         });
-//     }
-
-// }
-// let el;
-// function dragHandler(evt) {
-//     evt.preventDefault();
-//     //const el = gameArea.querySelector('#draggedElement');
-//     if (!el) el = document.getElementById('draggedElement');
-//     //console.log(el);
-//     requestAnimationFrame(()=>{
-//         el.style.left = `${evt.clientX}px`;
-//         el.style.top = `${evt.clientY}px`;
-//     });
-// }
 
 
 gameArea.addEventListener('dragstart', (evt) => {
-    //evt.preventDefault();
     if (selfOrParentCheck(evt, ".foundation")
         || selfOrParentCheck(evt, "#waste-slot")
         || selfOrParentCheck(evt, ".tableau")
@@ -103,25 +58,18 @@ gameArea.addEventListener('dragstart', (evt) => {
             fromPile: evt.target.parentNode.id,
             eventData: evt
         });
-        //evt.target.ondrag = throttle(dragHandler, 33);
-        //evt.target.ondrag = throttle(dragHandler, 13);
     }
 });
 
 
 
 gameArea.addEventListener('dragend', (evt) => {
-    console.log('drag end');
-    evt.target.removeEventListener('drag', throttle(dragHandler, 33));
-    //evt.target.removeEventListener('drag', throttle(dragHandler, 17));
-    gameArea.removeChild(el);
-    el = null;
+    
 });
 
 // click controllers
 gameArea.addEventListener('click', (evt) => {
     if (selfOrParentCheck(evt, '#deck-slot')) {
-        //solitaire.onDeckHit();
         eventSystem.trigger('deck-hit', {});
     }
 })
