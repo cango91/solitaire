@@ -7,18 +7,18 @@ export default class Solitaire {
     acceptInput;
     constructor() {
         this.gameSettings = {};
-        this.foundationSuites = {
-            0: null,
-            1: null,
-            2: null,
-            3: null
-        };
         this.buildDataObjects = this.buildDataObjects.bind(this);
         this.clearHistory = this.clearHistory.bind(this);
         this.onDeckHit = this.onDeckHit.bind(this);
         this.undo = this.undo.bind(this);
         this.executeCommand = this.executeCommand.bind(this);
         this.onDragStartCard = this.onDragStartCard.bind(this);
+        this.onDragOverPile = this.onDragOverPile.bind(this);
+        this._dragStart = this._dragStart.bind(this);
+        this._dragOver = this._dragOver.bind(this);
+        this._getFoundationOfSuit = this._getFoundationOfSuit.bind(this);
+        this._getFoundationWithId =this._getFoundationWithId.bind(this);
+        this._getTableauWithId= this._getTableauWithId.bind(this);
     }
 
     initialize(
@@ -41,9 +41,12 @@ export default class Solitaire {
         eventSystem.remove('pile-clicked');
         eventSystem.remove('pile-dragged');
         eventSystem.remove('drag-start-card');
+        eventSystem.remove('drag-over-pile');
+
 
         eventSystem.listen('deck-hit', this.onDeckHit);
         eventSystem.listen('drag-start-card', this.onDragStartCard)
+        eventSystem.listen('drag-over-pile',this.onDragOverPile);
 
 
         eventSystem.trigger('game-initialized', { settings: this.gameSettings, deck: this.deck.snapshot() });
@@ -60,6 +63,13 @@ export default class Solitaire {
                 this.foundations.push(new Foundation(i));
             this.tableaux.push(new Tableau(i));
         }
+        this.foundationSuites = {
+            0: null,
+            1: null,
+            2: null,
+            3: null
+        };
+        this.draggedPileOrCard = null;
     }
 
     async executeCommand(command) {
@@ -98,57 +108,18 @@ export default class Solitaire {
 
     //---- GAME EVENT HANDLING ----//
 
-    onDragStartCard({ cardIdx, fromPile, eventData }) {
+    onDragOverPile(data) {
+        if(!this.acceptInput) return;
+        this._disableInputs();
+        this._dragOver(data);
+        this._enableInputs();
+    }
+
+
+    onDragStartCard(data) {
         if (!this.acceptInput) return;
         this._disableInputs();
-        let card;
-        switch (fromPile.substring(0, 1).toLowerCase()) {
-            case 'w':
-                card = this.waste.getCardAt(cardIdx);
-                if (!card) break;
-                if (card.isDraggable)
-                    eventSystem.trigger('validated-drag-start-card', {
-                        action: "drag-start",
-                        card: card.snapshot(),
-                        fromPile: this.waste.snapshot(),
-                        cardIdx, 
-                        evt: eventData
-                    });
-                break;
-            case 'f':
-                const foundationIdx = Number(fromPile.substring(fromPile.length - 1)) - 1;
-                const foundation = this.foundations[foundationIdx];
-                card = foundation.getCardAt(cardIdx);
-                if (!card) break;
-                if (card.isDraggable)
-                    eventSystem.trigger('validated-drag-start-card', {
-                        action: "drag-start",
-                        card: card.snapshot(),
-                        fromPile: foundation.snapshot(),
-                        cardIdx,
-                        foundationIdx,
-                        evt: eventData
-                    });
-                break;
-            case 't':
-                const tableauIdx = Number(fromPile.substring(fromPile.length - 1)) - 1;
-                const tableau = this.tableaux[tableauIdx];
-                card = tableau.getCardAt(cardIdx);
-                if (!card) break;
-                if (card.isDraggable)
-                    eventSystem.trigger(cardIdx + 1 < tableau.stack.length ? 'validated-drag-start-pile' : 'validated-drag-start-card', {
-                        action: "drag-start",
-                        card: card.snapshot(),
-                        fromPile: tableau.snapshot(),
-                        cardIdx,
-                        tableauIdx,
-                        evt: eventData
-                    });
-                break;
-            default:
-                console.log('nop');
-                break;
-        }
+        this._dragStart(data);
         this._enableInputs();
     }
 
@@ -199,6 +170,116 @@ export default class Solitaire {
     }
     _enableInputs() {
         this.acceptInput = true;
+    }
+
+    _dragStart({ cardIdx, fromPile, eventData }) {
+        let card;
+        switch (fromPile.substring(0, 1).toLowerCase()) {
+            case 'w':
+                card = this.waste.getCardAt(cardIdx);
+                if (!card) break;
+                if (card.isDraggable) {
+                    eventSystem.trigger('validated-drag-start-card', {
+                        action: "drag-start",
+                        card: card.snapshot(),
+                        fromPile: this.waste.snapshot(),
+                        cardIdx,
+                        evt: eventData
+                    });
+                    this.draggedPileOrCard = Card.FromSnapshot(card.snapshot());
+                }
+                break;
+            case 'f':
+                const foundation = this._getFoundationWithId(fromPile)
+                card = foundation.getCardAt(cardIdx);
+                if (!card) break;
+                if (card.isDraggable) {
+                    eventSystem.trigger('validated-drag-start-card', {
+                        action: "drag-start",
+                        card: card.snapshot(),
+                        fromPile: foundation.snapshot(),
+                        cardIdx,
+                        foundationIdx: foundation.idx,
+                        evt: eventData
+                    });
+                    this.draggedPileOrCard = Card.FromSnapshot(card.snapshot());
+                }
+                break;
+            case 't':
+                const tableau = this._getTableauWithId(fromPile);
+                card = tableau.getCardAt(cardIdx);
+                let eventName;
+                if (!card) break;
+                if (card.isDraggable) {
+                    if(cardIdx + 1 < tableau.stack.length){
+                        eventName ='validated-drag-start-pile';
+                        const pile = new Pile();
+                        pile.stack = tableau.stack.slice(cardIdx);
+                        this.draggedPileOrCard = Pile.FromSnapshot(pile.snapshot());
+                    }else{
+                        eventName =  'validated-drag-start-card';
+                        this.draggedPileOrCard = Card.FromSnapshot(card.snapshot());
+                    }
+                    eventSystem.trigger(eventName, {
+                        action: "drag-start",
+                        card: card.snapshot(),
+                        fromPile: tableau.snapshot(),
+                        cardIdx,
+                        tableauIdx: tableau.idx,
+                        evt: eventData
+                    });
+                }
+                break;
+            default:
+                console.error('An error occured at drag-start-card event handler');
+                break;
+        }
+        console.log(this.draggedPileOrCard);
+    }
+
+    _dragOver({overPile,eventData}){
+        if(!this.draggedPileOrCard) return;
+        if(overPile.startsWith('t')){
+            const tableau = this._getTableauWithId(overPile);
+            let eventName;
+            if(this.draggedPileOrCard instanceof Card){
+                if(tableau.allowDrop(this.draggedPileOrCard)){
+                    eventName='valid-drag-over-pile';
+                }else{
+                    eventName='invalid-drag-over-pile';
+                };
+            }else{ 
+                if(tableau.allowDrop(Pile.FromSnapshot(this.draggedPileOrCard))){
+                    eventName='valid-drag-over-pile';
+                }else{
+                    eventName='invalid-drag-over-pile';
+                }
+            }
+            eventSystem.trigger(eventName,{
+                action:"drag-over",
+                overPile: tableau.snapshot(),
+                evt: eventData
+            });
+        }else{
+            
+        }
+    }
+
+    _getFoundationOfSuit(suit){
+        return this.foundationSuites[suit.value];
+    }
+
+
+    _getTableauWithId(strId){
+        if(!strId.startsWith('t')) throw new Error(`Invalid tableau string ID: ${strId}`);
+        const tableauIdx = Number(strId.substring(strId.length - 1)) - 1;
+        return this.tableaux[tableauIdx];
+    }
+
+    _getFoundationWithId(strId){
+        if(!strId.startsWith('f')) throw new Error(`Invalid foundation string ID: ${strId}`);
+        const foundationIdx = Number(strId.substring(strId.length - 1)) - 1;
+       return this.foundations[foundationIdx];
     }
 
 

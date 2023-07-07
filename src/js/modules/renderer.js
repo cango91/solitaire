@@ -10,15 +10,9 @@ let MOVE_SPEED = 3000;
 let WASTE_DURATION = 100;
 
 export default class Renderer {
-    constructor({
-        enableAnimations = true,
-        animationSpeeds = {} = {
-            flipDuration: FLIP_DURATION,
-            moveSpeed: MOVE_SPEED,
-            wasteDuration: WASTE_DURATION
-        } } = {}) {
-        this.enableAnimations = enableAnimations;
-        this.animationSpeeds = animationSpeeds;
+    constructor(settings = {}) {
+
+        this.configureSettings(settings);
 
         this.gameDOM = {};
         this.gameDOM.tableauxElements = [];
@@ -37,11 +31,17 @@ export default class Renderer {
         this.renderFlipPile = this.renderFlipPile.bind(this);
         this.renderMoveCards = this.renderMoveCards.bind(this);
         this.renderDragStartCard = this.renderDragStartCard.bind(this);
+        this._renderDragStart = this._renderDragStart.bind(this);
+        this._dragUpdate = this._dragUpdate.bind(this);
+        this.renderValidDragOverPile = this.renderValidDragOverPile.bind(this);
+
     }
 
     configureSettings(
         {
             enableAnimations = true,
+            feedbackDragged = true,
+            feedbackDragOver = true,
             animationSpeeds = {} = {
                 flipDuration: FLIP_DURATION,
                 moveSpeed: MOVE_SPEED,
@@ -50,6 +50,8 @@ export default class Renderer {
         } = {}) {
         this.enableAnimations = enableAnimations;
         this.animationSpeeds = animationSpeeds;
+        this.feedbackDragOver = feedbackDragOver;
+        this.feedbackDragged = feedbackDragged;
     }
 
     initializeGameDOM(
@@ -58,13 +60,15 @@ export default class Renderer {
             wasteElement,
             foundationElements,
             tableauxElements,
+            fakeDragDiv
 
         } = {}) {
         this.gameDOM.deckElement = deckElement;
         this.gameDOM.wasteElement = wasteElement;
         this.gameDOM.foundationElements = foundationElements;
         this.gameDOM.tableauxElements = tableauxElements;
-
+        this.gameDOM.fakeDragDiv = fakeDragDiv;
+        this.gameDOM.dragElement = null;
     }
 
     startRendering() {
@@ -96,6 +100,8 @@ export default class Renderer {
         eventSystem.remove('flip-pile');
         eventSystem.remove('validated-drag-start-card');
         eventSystem.remove('validated-drag-start-pile');
+        eventSystem.remove('valid-drag-over-pile');
+        eventSystem.remove('invalid-drag-over-pile');
 
     }
 
@@ -108,6 +114,10 @@ export default class Renderer {
         eventSystem.listen('flip-pile', this.renderFlipPile);
         eventSystem.listen('validated-drag-start-card', this.renderDragStartCard);
         eventSystem.listen('validated-drag-start-pile', this.renderDragStartPile);
+        eventSystem.listen('valid-drag-over-pile', this.renderValidDragOverPile);
+        eventSystem.listen('invalid-drag-over-pile', this.renderInvalidDragOverPile);
+        eventSystem.listen('drag-update', this._dragUpdate);
+
     }
 
     renderInitialState({ deck, callback }) {
@@ -171,92 +181,96 @@ export default class Renderer {
         return cardElement;
     }
 
-    renderDragStartCard({ card, fromPile, cardIdx, evt }) {
-        const pileDOM = this.getDOM(fromPile);
-        const draggedCard = this._makeCardElement(Card.FromSnapshot(card), 'dragged', 'pile-head', 'pile-end');
-        const cardToHide = Array.from(pileDOM.children)[cardIdx];
-        cardToHide.style.opacity = 0;
-        draggedCard.style.position = 'fixed';
-        draggedCard.style.pointerEvents = 'none';
-        draggedCard.style.zIndex = '1000';
-        draggedCard.style.left = `calc(${evt.clientX}px - 2em)`;
-        draggedCard.style.top = `calc(${evt.clientY}px - 2.25em)`;
-        document.body.appendChild(draggedCard);
-        let rect = draggedCard.getBoundingClientRect();
-        evt.dataTransfer.setDragImage(draggedCard, evt.clientX - rect.left, evt.clientY - rect.top);
-        setTimeout(() => draggedCard.style.opacity = 0, 1);
+    renderValidDragOverPile(data) {
+        this._repaintDragImage('valid', data);
     }
 
-    renderDragStartPile({ card, fromPile, cardIdx, evt }) {
+    renderInvalidDragOverPile(data) {
+
+    }
+
+    renderDragStartCard(data) {
+        this._renderDragStart(data);
+    }
+
+    renderDragStartPile(data) {
+        this._renderDragStart(data);
+    }
+
+    _renderDragStart({ card, fromPile, cardIdx, evt }) {
         const pileDOM = this.getDOM(fromPile);
-        const pileOfCards = Array.from(pileDOM.children).slice(cardIdx);
+        evt.dataTransfer.setDragImage(this.gameDOM.fakeDragDiv, 99999, 0);
         const pileContainer = document.createElement('div');
-        pileContainer.className = 'clone-pile';
         pileContainer.style.position = 'fixed';
-        pileContainer.style.pointerEvents = 'none';
-        pileContainer.style.zIndex = 1000;
-        pileOfCards.forEach((c,idx) => {
+        pileContainer.style.transition = 'none';
+        pileContainer.style.left = `$calc(${evt.clientX}px - 2em)`;
+        pileContainer.style.top = `$calc(${evt.clientY}px - 2.25em)`;
+        pileContainer.className = 'clone-pile';
+        const pileOfCards = Array.from(pileDOM.children).slice(cardIdx);
+        pileOfCards.forEach((c, idx) => {
             const clone = c.cloneNode(true);
-            clone.classList.add('dragged','on-tableau');
-            if(idx===0)
-                clone.classList.add('pile-head');
-            if(idx === pileOfCards.length-1)
-                clone.classList.add('pile-end');
+            if (this.feedbackDragged) {
+                clone.classList.add('dragged');
+                if (idx === 0)
+                    clone.classList.add('pile-head');
+                if (idx === pileOfCards.length - 1)
+                    clone.classList.add('pile-end');
+            }
             c.style.opacity = 0;
+            clone.classList.remove('on-tableau');
+            clone.classList.remove('on-waste');
+            clone.classList.remove('on-foundation');
+            clone.classList.add('on-tableau');
             pileContainer.appendChild(clone);
         });
         document.body.appendChild(pileContainer);
-        let rect = pileContainer.getBoundingClientRect();
-        pileContainer.style.left = `$calc(${evt.clientX}px - 2em)`;
-        pileContainer.style.top = `$calc(${evt.clientY}px - 2em)`;
-        evt.dataTransfer.setDragImage(pileContainer,evt.clientX-rect.left,evt.clientY-rect.top);
-        setTimeout(()=>{
-            Array.from(pileContainer.children).forEach(clone => clone.opacity=0);
-        },1);
-
-        // cardElAtPile.style.opacity = 0;
-        // const fakeDiv = document.createElement('div');
-        // //fakeDiv.className = 'pile-clone';
-        // fakeDiv.classList.add('clone-pile');
-        // fakeDiv.style.position = 'fixed';
-        // fakeDiv.style.pointerEvents = 'none';
-        // fakeDiv.style.opacity = 1;
-        // fakeDiv.style.zIndex = 1000;
-        // fakeDiv.style.left = `${evt.clientX}px`;
-        // fakeDiv.style.top = `${evt.clientY}px`;
-        // fakeDiv.appendChild(draggedCardEl);
-        // fakeDiv.appendChild(this._makeCardElement(new Card(12, 'h', true), 'dragged', 'pile-end', 'on-tableau'))
-        // document.body.appendChild(fakeDiv);
-        // let rect = fakeDiv.getBoundingClientRect();
-        // evt.dataTransfer.setDragImage(fakeDiv, evt.clientX - rect.left, evt.clientY - rect.top);
-        // setTimeout(() => fakeDiv.style.opacity = 0, 1);
-
-
-        //console.log(fakeDiv);   
-        //fakeDiv.style.opacity = 0;
-        // draggedCardEl.style.position = 'fixed';
-        // draggedCardEl.style.pointerEvents = 'none';
-        // draggedCardEl.style.zIndex = '1000';
-        // draggedCardEl.style.left = `${dataTransfer.clientX}px`;
-        // draggedCardEl.style.top = `${dataTransfer.clientY}px`;
-        //document.body.appendChild(draggedCardEl);
-        //let rect = draggedCardEl.getBoundingClientRect();
-
-        // dataTransfer.dataTransfer.setDragImage(draggedCardEl, dataTransfer.clientX - rect.left, dataTransfer.clientY - rect.top)
-        // draggedCardEl.style.opacity = 0;
-        //draggedCardEl.setAttribute('id','draggedElement');
-        //document.querySelector('.game-container').appendChild(draggedCardEl);
-        // dataTransfer.setData('text/html',draggedCardEl.outerHTML);
-        // console.log(draggedCardEl.outerHTML);
-        // Object.defineProperty(new Event('drag'), 'target', {writable: false, value: draggedCardEl});
-        // //dataTransfer.setData('text/plain',draggedCardEl.id);
-        // dataTransfer.setDragImage(new Image(),0,0);
-        // const pileDOM = this.getDOM(fromPile);
-        // //const draggedCardEl = this._makeCardElement(Card.FromSnapshot(card),'dragged', 'pile-end','pile-head');
-        // const cardElAtPile = Array.from(pileDOM.children)[cardIdx];
-        // cardElAtPile.classList.add('dragged','pile-head','pile-end');
-        // cardElAtPile.style.opacity = 0;
+        this.gameDOM.dragElement = pileContainer;
     }
+
+
+    // renderDragStartCard({ card, fromPile, cardIdx, evt }) {
+    //     const pileDOM = this.getDOM(fromPile);
+    //     const draggedCard = this._makeCardElement(Card.FromSnapshot(card), 'dragged', 'pile-head', 'pile-end');
+    //     const cardToHide = Array.from(pileDOM.children)[cardIdx];
+    //     cardToHide.style.opacity = 0;
+    //     draggedCard.style.position = 'fixed';
+    //     draggedCard.style.pointerEvents = 'none';
+    //     draggedCard.style.zIndex = '1000';
+    //     draggedCard.style.left = `calc(${evt.clientX}px - 2em)`;
+    //     draggedCard.style.top = `calc(${evt.clientY}px - 2.25em)`;
+    //     document.body.appendChild(draggedCard);
+    //     let rect = draggedCard.getBoundingClientRect();
+    //     evt.dataTransfer.setDragImage(draggedCard, evt.clientX - rect.left, evt.clientY - rect.top);
+    //     setTimeout(() => draggedCard.style.opacity = 0, 1);
+    // }
+
+    // renderDragStartPile({ card, fromPile, cardIdx, evt }) {
+    //     const pileDOM = this.getDOM(fromPile);
+    //     const pileOfCards = Array.from(pileDOM.children).slice(cardIdx);
+    //     const pileContainer = document.createElement('div');
+    //     pileContainer.className = 'clone-pile';
+    //     pileContainer.style.position = 'fixed';
+    //     pileContainer.style.pointerEvents = 'none';
+    //     pileContainer.style.zIndex = 1000;
+    //     pileOfCards.forEach((c,idx) => {
+    //         const clone = c.cloneNode(true);
+    //         clone.classList.add('dragged','on-tableau');
+    //         if(idx===0)
+    //             clone.classList.add('pile-head');
+    //         if(idx === pileOfCards.length-1)
+    //             clone.classList.add('pile-end');
+    //         c.style.opacity = 0;
+    //         pileContainer.appendChild(clone);
+    //     });
+    //     document.body.appendChild(pileContainer);
+    //     let rect = pileContainer.getBoundingClientRect();
+    //     pileContainer.style.left = `$calc(${evt.clientX}px - 2em)`;
+    //     pileContainer.style.top = `$calc(${evt.clientY}px - 2.25em)`;
+    //     evt.dataTransfer.setDragImage(pileContainer,evt.clientX-rect.left,evt.clientY-rect.top);
+    //     setTimeout(()=>{
+    //         Array.from(pileContainer.children).forEach(clone => clone.opacity=0);
+    //     },1);
+    // }
 
 
     renderMoveCard({ card, fromPile, toPile, callback }) {
@@ -445,5 +459,31 @@ export default class Renderer {
             cardEl.classList.add(...additional_class);
         }
         return cardEl;
+    }
+
+    _repaintDragImage(cls, { evt }) {
+        const dragElement = document.querySelector('.clone-pile') || document.querySelector('.dragged');
+        if (!dragElement) console.error('Drag element not found');
+        if (dragElement.childElementCount) {
+            console.log('yo');
+        } else {
+            let originalTransition = dragElement.style.transition;
+            dragElement.classList.remove('invalid');
+            dragElement.classList.add('valid');
+            dragElement.style.transition = 'none';
+            dragElement.style.top = `calc(${evt.clientY}px - 2.25em)`;
+            dragElement.style.left = `calc(${evt.clientX}px - 2em)`;
+            dragElement.style.opacity = 1;
+            dragElement.style.zIndex = 5000;
+            let rect = dragElement.getBoundingClientRect();
+            evt.dataTransfer.setDragImage(dragElement, evt.clientX - rect.left, evt.clientY - rect.top);
+
+
+        }
+    }
+
+    _dragUpdate({ evt }) {
+        this.gameDOM.dragElement.style.left = evt.clientX + 'px';
+        this.gameDOM.dragElement.style.top = evt.clientY + 'px';
     }
 }

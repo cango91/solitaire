@@ -24,6 +24,9 @@
     --button-border: whitesmoke;
 
     --drag-border-size: 3px;
+
+    --drag-border-valid: #5CBE8E;
+    --drag-border-invalid: chocolate;
 }
 
 html {
@@ -324,17 +327,35 @@ body {
     align-items: center;
 }
 
+#fake-drag{
+    opacity: 0;
+}
+
+.slot .card:not(.back).feedback,
 .card.dragged {
     border-left: var(--drag-border-size) solid var(--icon-highlight);
     border-right: var(--drag-border-size) solid var(--icon-highlight);
 }
 
+.slot .card:not(.back).feedback.pile-head,
 .card.dragged.pile-head {
     border-top: var(--drag-border-size) solid var(--icon-highlight);
 }
-
+.slot .card:not(.back).feedback.pile-end,
 .card.dragged.pile-end {
     border-bottom: var(--drag-border-size) solid var(--icon-highlight);
+}
+.slot .card:not(.back).feedback.valid,
+.card.dragged.valid{
+    border-color: var(--drag-border-valid);
+}
+.slot .card:not(.back).feedback.invalid,
+.card.dragged.invalid{
+    border-color: var(--drag-border-invalid);
+}
+
+.slot .card:not(.back).feedback{
+    scale: 1.1;
 }
 
 /* .card.dragged:not(.card.dragged.pile-head) {

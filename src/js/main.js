@@ -11,6 +11,7 @@ const wasteSlot = document.getElementById('waste-slot');
 const scoreboardElement = document.getElementById('scoreboard');
 const foundations = [];
 const tableaux = [];
+const fakeDragDiv = document.getElementById('fake-drag');
 document.querySelectorAll('.tableau').forEach(tab => tableaux.push(tab));
 document.querySelectorAll('.foundation').forEach(foundation => foundations.push(foundation));
 
@@ -23,6 +24,11 @@ foundations.sort((a, b) => Number(a.id.substring(a.id.length - 1)) > Number(b.id
 function selfOrParentCheck(event, parentSelector) {
     return event.target.matches(`${parentSelector}, ${parentSelector} *`);
 }
+// convenience function for getting an element's order amongst its siblings
+function getChildIdx(parentElement, childElement) {
+    return Array.from(parentElement.children).indexOf(childElement);
+}
+
 
 const renderer = new Renderer();
 renderer.initializeGameDOM(
@@ -30,7 +36,8 @@ renderer.initializeGameDOM(
         deckElement: deckSlot,
         wasteElement: wasteSlot,
         foundationElements: foundations,
-        tableauxElements: tableaux
+        tableauxElements: tableaux,
+        fakeDragDiv
     });
 renderer.startRendering();
 renderer.configureSettings({ enableAnimations: false });
@@ -39,13 +46,59 @@ solitaire.initialize();
 
 //---- CONTROLLER(S) ----//
 
+// let dragEl = document.createElement('div');
+// dragEl.className = 'clone-pile';
+// dragEl.style.transition = 'none';
+// dragEl.style.position = 'fixed';
+// dragEl.style.zIndex = 1000;
+// let lastX = 0, lastY = 0;
+// document.body.appendChild(dragEl);
+// let fakeEl = document.createElement('div');
+
+// fakeEl.appendChild(document.createTextNode(`&nbsp;`))
+// //document.body.appendChild(fakeEl);
+// //dragEl = document.querySelector('.clone-pile');
+// // experimental
+// fakeEl = document.getElementById('fake-drag');
+// gameArea.addEventListener('dragstart', (evt) => {
+//     if (selfOrParentCheck(evt, ".foundation")
+//         || selfOrParentCheck(evt, "#waste-slot")
+//         || selfOrParentCheck(evt, ".tableau")
+//     ) {
+//         //evt.preventDefault();
+//         evt.dataTransfer.setDragImage(fakeEl, 99999, 0);
+//         //evt.target.parentElement.removeChild(evt.target);
+//         //dragEl.appendChild(evt.target);
+//         const clone = evt.target.cloneNode(true);
+//         clone.style.transition = "none";
+//         dragEl.appendChild(clone);
+//         evt.target.style.opacity = 0;
+//         dragEl.style.top = evt.clientY;
+//         dragEl.style.left = evt.clientX;
+//         dragEl.style.opacity = 1;
+//         lastX = evt.clientX;
+//         lastY = evt.clientY;
+//         evt.target.addEventListener('drag', dragHandler);
+//     }
+// });
+
+// function dragHandler(evt) {
+//     // console.log('at least we here');
+//     // dragEl.style.left = evt.clientX + 'px';
+//     // dragEl.style.top = evt.clientY + 'px';
+//     //evt.preventDefault();
+//     eventSystem.trigger('drag-update',{evt, dragEl});
+// }
+
+
+
+
 // drag controllers
-//but first, a utility function
-function getChildIdx(parentElement, childElement) {
-    return Array.from(parentElement.children).indexOf(childElement);
+
+function dragHandler(evt){
+    evt.preventDefault();
+    eventSystem.trigger('drag-update',{evt});
 }
-
-
 
 gameArea.addEventListener('dragstart', (evt) => {
     if (selfOrParentCheck(evt, ".foundation")
@@ -58,13 +111,25 @@ gameArea.addEventListener('dragstart', (evt) => {
             fromPile: evt.target.parentNode.id,
             eventData: evt
         });
+        evt.target.addEventListener('drag',dragHandler);
     }
 });
 
-
+gameArea.addEventListener('dragover', (evt) => {
+    if (selfOrParentCheck(evt, ".foundation")
+        || selfOrParentCheck(evt, ".tableau")
+        || selfOrParentCheck(evt, '.on-tableau')
+        || selfOrParentCheck(evt, '.on-foundation')) {
+        eventSystem.trigger('drag-over-pile', {
+            action: "controller",
+            overPile: evt.target.parentNode.id ? evt.target.parentNode.id : evt.target.id, // if foundation or tableau is empty, i.e. has no children
+            eventData: evt
+        });
+    }
+});
 
 gameArea.addEventListener('dragend', (evt) => {
-    
+
 });
 
 // click controllers
