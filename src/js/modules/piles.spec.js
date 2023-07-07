@@ -239,3 +239,101 @@ test("Pile.FromSnapshot can inform about faceUp of all its descendants' cards", 
     }
 
 });
+
+test("Empty tableau accepts valid card drops",()=>{
+    const tableau = new Tableau(1);
+    const cK = new Card(13,'c',true);
+    const hK = new Card(13,'h',true);
+    const dK = new Card(13,'d',true);
+    const sK = new Card(13,'s',true);
+    expect(tableau.allowDrop(cK)).toBe(true);
+    expect(tableau.allowDrop(hK)).toBe(true);
+    expect(tableau.allowDrop(dK)).toBe(true);
+    expect(tableau.allowDrop(sK)).toBe(true);
+});
+
+test("Empty tableau rejects cards other than Kings", ()=>{
+    const tableau = new Tableau(1);
+    const deck = new Deck();
+    deck.generateCards();
+    const noKingsDeck = deck.stack.filter(card=>card.value !==13);
+    expect(noKingsDeck.map(card=>{
+        card.flip(); // should be face up
+        return tableau.allowDrop(card);
+    }).every(val=>!val)).toBe(true);
+});
+
+test("Empty tableau rejects face-down card (should not be possible)",()=>{
+    const tableau = new Tableau(1);
+    expect(tableau.allowDrop(new Card(13,'c',false))).toBe(false);
+});
+
+test("Non-empty tableau rejects same color card", ()=>{
+    const tableau = new Tableau(1);
+    tableau.addCard(new Card(13,'h',true));
+    tableau.addCard(new Card(12,'c',true));
+    expect(tableau.allowDrop(new Card(11,'c',true))).toBe(false);
+    expect(tableau.allowDrop(new Card(11,'s',true))).toBe(false);
+});
+
+test("Non-empty tableau rejects card with correct color but wrong value",()=>{
+    const tableau = new Tableau(1);
+    tableau.addCard(new Card(13,'h',true));
+    tableau.addCard(new Card(12,'c',true));
+    expect(tableau.allowDrop(new Card(10,'h',true))).toBe(false);
+    expect(tableau.allowDrop(new Card(12,'d',true))).toBe(false);
+});
+
+describe("tableau.allowDrop",()=>{
+    let tableau;
+    let pile1, pile2, pile3, pile4;
+    let hPileArray;
+    let dPileArray;
+    let sPileArray;
+    let cPileArray;
+
+
+    beforeEach(()=>{
+        tableau = new Tableau(1);
+        pile1 = new Pile();
+        pile2 = new Pile();
+        pile3 = new Pile();
+        pile4 = new Pile();
+        hPileArray = [Card.fromCssClass('hK'),Card.fromCssClass('cQ')];
+        dPileArray = [Card.fromCssClass('dK'),Card.fromCssClass('cQ')];
+        sPileArray = [Card.fromCssClass('sK'),Card.fromCssClass('dQ')];
+        cPileArray = [Card.fromCssClass('cK'),Card.fromCssClass('dQ')];
+    });
+
+    it("should accept Pile starting with K of any color, if it is empty",()=>{
+        pile1.stack = dPileArray;
+        pile2.stack = hPileArray;
+        pile3.stack = sPileArray;
+        pile4.stack = cPileArray;
+        expect(tableau.allowDrop(pile1)).toBe(true);
+        expect(tableau.allowDrop(pile2)).toBe(true);
+        expect(tableau.allowDrop(pile3)).toBe(true);
+        expect(tableau.allowDrop(pile4)).toBe(true);
+    });
+
+    it("should reject Pile starting with other than K, if it is empty",()=>{
+        pile1.stack = dPileArray.reverse();
+        pile2.stack = hPileArray.reverse();
+        pile3.stack = sPileArray.reverse();
+        pile4.stack = cPileArray.reverse();
+        expect(tableau.allowDrop(pile1)).toBe(false);
+        expect(tableau.allowDrop(pile2)).toBe(false);
+        expect(tableau.allowDrop(pile3)).toBe(false);
+        expect(tableau.allowDrop(pile4)).toBe(false);
+    });
+
+    it("should accept vallid piles if it is not empty",()=>{
+        const validContinuationArray = [Card.fromCssClass('dJ'), Card.fromCssClass('c10')];
+        tableau.stack = dPileArray;
+        pile1.stack = validContinuationArray;
+        expect(tableau.allowDrop(pile1)).toBe(true);
+        tableau.stack[0].flip();
+        expect(tableau.allowDrop(pile1)).toBe(true);
+    });
+
+});

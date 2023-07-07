@@ -7,11 +7,18 @@ export default class Solitaire {
     acceptInput;
     constructor() {
         this.gameSettings = {};
+        this.foundationSuites = {
+            0: null,
+            1: null,
+            2: null,
+            3: null
+        };
         this.buildDataObjects = this.buildDataObjects.bind(this);
         this.clearHistory = this.clearHistory.bind(this);
         this.onDeckHit = this.onDeckHit.bind(this);
         this.undo = this.undo.bind(this);
         this.executeCommand = this.executeCommand.bind(this);
+        this.onDragStartCard = this.onDragStartCard.bind(this);
     }
 
     initialize(
@@ -33,8 +40,12 @@ export default class Solitaire {
         eventSystem.remove('deck-clicked');
         eventSystem.remove('pile-clicked');
         eventSystem.remove('pile-dragged');
+        eventSystem.remove('drag-start-card');
 
-        eventSystem.listen('deck-clicked', this.onDeckHit);
+        eventSystem.listen('deck-hit', this.onDeckHit);
+        eventSystem.listen('drag-start-card', this.onDragStartCard)
+
+
         eventSystem.trigger('game-initialized', { settings: this.gameSettings, deck: this.deck.snapshot() });
         this._enableInputs();
     }
@@ -87,13 +98,67 @@ export default class Solitaire {
 
     //---- GAME EVENT HANDLING ----//
 
+    onDragStartCard({ cardIdx, fromPile, eventData }) {
+        if (!this.acceptInput) return;
+        this._disableInputs();
+        let card;
+        switch (fromPile.substring(0, 1).toLowerCase()) {
+            case 'w':
+                card = this.waste.getCardAt(cardIdx);
+                if (!card) break;
+                if (card.isDraggable)
+                    eventSystem.trigger('validated-drag-start-card', {
+                        action: "drag-start",
+                        card: card.snapshot(),
+                        fromPile: this.waste.snapshot(),
+                        cardIdx, 
+                        dataTransfer: eventData
+                    });
+                break;
+            case 'f':
+                const foundationIdx = Number(fromPile.substring(fromPile.length - 1)) - 1;
+                const foundation = this.foundations[foundationIdx];
+                card = foundation.getCardAt(cardIdx);
+                if (!card) break;
+                if (card.isDraggable)
+                    eventSystem.trigger('validated-drag-start-card', {
+                        action: "drag-start",
+                        card: card.snapshot(),
+                        fromPile: foundation.snapshot(),
+                        cardIdx,
+                        foundationIdx,
+                        dataTransfer: eventData
+                    });
+                break;
+            case 't':
+                const tableauIdx = Number(fromPile.substring(fromPile.length - 1)) - 1;
+                const tableau = this.tableaux[tableauIdx];
+                card = tableau.getCardAt(cardIdx);
+                if (!card) break;
+                if (card.isDraggable)
+                    eventSystem.trigger(cardIdx + 1 < tableau.stack.length ? 'validated-drag-start-pile' : 'validated-drag-start-card', {
+                        action: "drag-start",
+                        card: card.snapshot(),
+                        fromPile: tableau.snapshot(),
+                        cardIdx,
+                        tableauIdx,
+                        dataTransfer: eventData
+                    });
+                break;
+            default:
+                console.log('nop');
+                break;
+        }
+        this._enableInputs();
+    }
+
     async onDeckHit() {
         if (!this.acceptInput) return
         // if deck is full, it means we deal
         this._disableInputs();
         if (this.deck.stack.length === 52) {
             await this._deal();
-        // if deck is not empty, it means we hit to waste
+            // if deck is not empty, it means we hit to waste
         } else if (this.deck.stack.length > 0) {
             const numToHit = Math.min(this.deck.stack.length, this.gameSettings.difficulty);
             const hitCmd = new HitCommand(this.deck, this.waste, numToHit);

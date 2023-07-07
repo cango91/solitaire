@@ -78,7 +78,9 @@ Now, on to what events and commands are actually defined by these actions. First
 **Events triggered:**
 + `drag-start-card`:
   + *Data required:* `{Card, fromPile}`
-
++ `validated-drag-start-card`:
+  + *Data required* `{card, fromPile, dataTransfer}`
+  
 ### **Action:** Drop a card on a valid spot
 **Command triggered:**
 + `MoveCard`:

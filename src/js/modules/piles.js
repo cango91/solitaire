@@ -14,6 +14,27 @@ export class Pile extends DataObject {
             return this.stack[this.stack.length - 1];
     }
 
+    get bottomCard() {
+        if (this.stack.length)
+            return this.stack[0];
+    }
+
+    getCardAt(idx){
+        if(this.stack.length>idx && idx>-1)
+            return this.stack[idx];
+        return null;
+    }
+
+    getCardIdx(card){
+        if(!card instanceof Card)
+            return null;
+        return this.stack.findIndex(c=>c.value == card.value && c.suit.value == card.suit.value);
+    }
+
+    get isEmpty() {
+        return !this.stack.length;
+    }
+
     removeTopCard() {
         this.topCard.isDraggable = false;
         return this.stack.pop();
@@ -24,7 +45,7 @@ export class Pile extends DataObject {
         this.stack.push(card);
     }
 
-    allowDrop(pile) {
+    allowDrop(pileOrCard) {
         return false;
     }
 
@@ -54,7 +75,7 @@ export class Pile extends DataObject {
 }
 
 export class Tableau extends Pile {
-    constructor(i){
+    constructor(i) {
         super();
         this.mayAcceptDrop = true;
         this.idx = i;
@@ -72,15 +93,32 @@ export class Tableau extends Pile {
         return pile;
     }
 
-    snapshot(){
+    snapshot() {
         const snap = super.snapshot();
         snap.name = Tableau.name;
         return snap;
     }
 
-    revealTopCard(){
+    revealTopCard() {
         this.topCard.faceUp = true;
         this.topCard.isDraggable = true;
+    }
+
+    allowDrop(pileOrCard) {
+        if (pileOrCard instanceof Card) {
+            if (!this.stack.length) return pileOrCard.value == 13 && pileOrCard.faceUp;
+            return !!((Card.toInteger(pileOrCard) ^ Card.toInteger(this.topCard)) >> 1 & 1)
+                && this.topCard.value - pileOrCard.value === 1
+                && !!this.topCard.faceUp
+                && !!pileOrCard.faceUp;
+        } else {
+            if (!this.stack.length) return pileOrCard.bottomCard.value == 13 && pileOrCard.bottomCard.faceUp;
+            const bottomCard = pileOrCard.bottomCard;
+            return !!((Card.toInteger(bottomCard) ^ Card.toInteger(this.topCard)) >> 1 & 1)
+                && (this.topCard.value - bottomCard.value == 1)
+                && !!this.topCard.faceUp
+                && !!bottomCard.faceUp;
+        }
     }
 }
 
@@ -88,11 +126,11 @@ export class Waste extends Pile {
     static FromSnapshot(snapshot) {
         const waste = new this();
         waste.stack = super.FromSnapshot(snapshot).stack;
-        if(waste.topCard) waste.topCard.isDraggable = true;
+        if (waste.topCard) waste.topCard.isDraggable = true;
         return waste;
     }
 
-    snapshot(){
+    snapshot() {
         const snap = super.snapshot();
         snap.name = Waste.name;
         return snap;
@@ -106,16 +144,16 @@ export class Waste extends Pile {
         this.stack.push(card);
     }
 
-    removeTopCard(){
+    removeTopCard() {
         const card = this.stack.pop();
-        if(this.stack.length)
+        if (this.stack.length)
             this.topCard.isDraggable = true;
         return card;
     }
 }
 
 export class Foundation extends Pile {
-    constructor(i){
+    constructor(i) {
         super();
         this.mayAcceptDrop = true;
         this.idx = i;
@@ -129,13 +167,13 @@ export class Foundation extends Pile {
         return pile;
     }
 
-    snapshot(){
+    snapshot() {
         const snap = super.snapshot();
         snap.name = Foundation.name;
         return snap;
     }
 
-    addCard(card){
+    addCard(card) {
         if (this.stack.length)
             this.topCard.isDraggable = false;
         card.isDraggable = true;
@@ -143,13 +181,29 @@ export class Foundation extends Pile {
         this.stack.push(card);
     }
 
-    removeTopCard(){
+    removeTopCard() {
         const card = this.stack.pop();
-        if(this.stack.length){
+        if (this.stack.length) {
             this.topCard.isDraggable = true;
             this.topCard.faceUp = true;
         }
         return card;
+    }
+
+    allowDrop(pileOrCard) {
+        if (!pileOrCard instanceof Card) return false;
+        if (this.stack.length) {
+            if (this.topCard.suit.value === pileOrCard.suit.value && this.topCard.value == pileOrCard.value - 1)
+                return true;
+            return false;
+        } else {
+            if (pileOrCard.value == 1)
+                return true;
+            return false;
+        }
+    }
+    get isFull() {
+        return this.stack.length === 13;
     }
 }
 
@@ -159,7 +213,7 @@ export class Deck extends Pile {
         this.shuffle = this.shuffle.bind(this);
     }
 
-    generateCards(){
+    generateCards() {
         // create 52 cards and store them
         for (let i = 0; i < 52; i++) {
             this.addCard(Card.fromInteger(((i % 13) << 3) | (i % 4) << 1));
@@ -167,7 +221,7 @@ export class Deck extends Pile {
         this.isShuffled = false;
     }
 
-    addCard(card){
+    addCard(card) {
         card.faceUp = false;
         super.addCard(card);
     }

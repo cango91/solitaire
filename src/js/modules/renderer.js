@@ -35,6 +35,7 @@ export default class Renderer {
         this.renderFlipTopCardAtPile = this.renderFlipTopCardAtPile.bind(this);
         this.renderFlipPile = this.renderFlipPile.bind(this);
         this.renderMoveCards = this.renderMoveCards.bind(this);
+        this.renderDragStartCard = this.renderDragStartCard.bind(this);
     }
 
     configureSettings(
@@ -92,6 +93,8 @@ export default class Renderer {
         eventSystem.remove('flip-top-n-cards-at-pile');
         eventSystem.remove('move-cards');
         eventSystem.remove('flip-pile');
+        eventSystem.remove('validated-drag-start-card');
+        eventSystem.remove('validated-drag-start-pile');
 
     }
 
@@ -102,6 +105,8 @@ export default class Renderer {
         eventSystem.listen('flip-top-card-at-pile', this.renderFlipTopCardAtPile);
         eventSystem.listen('flip-top-n-cards-at-pile', this.renderFlipNCardsAtPile);
         eventSystem.listen('flip-pile', this.renderFlipPile);
+        eventSystem.listen('validated-drag-start-card', this.renderDragStartCard);
+        eventSystem.listen('validated-drag-start-pile', this.renderDragStartPile);
     }
 
     renderInitialState({ deck, callback }) {
@@ -114,6 +119,7 @@ export default class Renderer {
             res();
         });
     }
+
 
     getDOM(pile) {
         const reconst = Pile.FromSnapshot(pile);
@@ -164,12 +170,58 @@ export default class Renderer {
         return cardElement;
     }
 
+    renderDragStartCard({ card, fromPile, cardIdx, dataTransfer }) {
+        const pileDOM = this.getDOM(fromPile);
+        const draggedCardEl = this._makeCardElement(Card.FromSnapshot(card), 'dragged', 'pile-head','on-tableau');
+        const cardElAtPile = Array.from(pileDOM.children)[cardIdx];
+        cardElAtPile.style.opacity = 0;
+        const fakeDiv = document.createElement('div');
+        //fakeDiv.className = 'pile-clone';
+        fakeDiv.classList.add('clone-pile');
+        fakeDiv.style.position = 'fixed';
+        fakeDiv.style.pointerEvents = 'none';
+        fakeDiv.style.opacity = 1;
+        fakeDiv.style.zIndex = 1000;
+        fakeDiv.style.left = `${dataTransfer.clientX}px`;
+        fakeDiv.style.top = `${dataTransfer.clientY}px`;
+        fakeDiv.appendChild(draggedCardEl);
+        fakeDiv.appendChild(this._makeCardElement(new Card(12,'h',true),'dragged','pile-end','on-tableau'))
+        document.body.appendChild(fakeDiv);
+        let rect = fakeDiv.getBoundingClientRect();
+        dataTransfer.dataTransfer.setDragImage(fakeDiv, dataTransfer.clientX - rect.left, dataTransfer.clientY - rect.top)
+        setTimeout(()=>fakeDiv.style.opacity=0,1)
+        //console.log(fakeDiv);   
+        //fakeDiv.style.opacity = 0;
+        // draggedCardEl.style.position = 'fixed';
+        // draggedCardEl.style.pointerEvents = 'none';
+        // draggedCardEl.style.zIndex = '1000';
+        // draggedCardEl.style.left = `${dataTransfer.clientX}px`;
+        // draggedCardEl.style.top = `${dataTransfer.clientY}px`;
+        //document.body.appendChild(draggedCardEl);
+        //let rect = draggedCardEl.getBoundingClientRect();
+
+        // dataTransfer.dataTransfer.setDragImage(draggedCardEl, dataTransfer.clientX - rect.left, dataTransfer.clientY - rect.top)
+        // draggedCardEl.style.opacity = 0;
+        //draggedCardEl.setAttribute('id','draggedElement');
+        //document.querySelector('.game-container').appendChild(draggedCardEl);
+        // dataTransfer.setData('text/html',draggedCardEl.outerHTML);
+        // console.log(draggedCardEl.outerHTML);
+        // Object.defineProperty(new Event('drag'), 'target', {writable: false, value: draggedCardEl});
+        // //dataTransfer.setData('text/plain',draggedCardEl.id);
+        // dataTransfer.setDragImage(new Image(),0,0);
+        // const pileDOM = this.getDOM(fromPile);
+        // //const draggedCardEl = this._makeCardElement(Card.FromSnapshot(card),'dragged', 'pile-end','pile-head');
+        // const cardElAtPile = Array.from(pileDOM.children)[cardIdx];
+        // cardElAtPile.classList.add('dragged','pile-head','pile-end');
+        // cardElAtPile.style.opacity = 0;
+    }
+
 
     renderMoveCard({ card, fromPile, toPile, callback }) {
         const pile = this._getCorrectPileState(fromPile);
         pile.addCard(Card.FromSnapshot(card));
         pile.stack = pile.stack.slice(-1);
-        return this.renderMoveCards({cardsPile: pile.snapshot(),fromPile,toPile,callback});
+        return this.renderMoveCards({ cardsPile: pile.snapshot(), fromPile, toPile, callback });
     }
 
 

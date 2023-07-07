@@ -61,7 +61,7 @@ export default class Card extends DataObject{
         let suit = cssClass.substring(0, 1);
         let val = cssClass.substring(1);
         val = Number.isNaN(parseInt(val)) ? Object.keys(FACE_VALUES).find(key => FACE_VALUES[key] === val.toUpperCase()) : parseInt(val);
-        return new Card(val, suit);
+        return new Card(val, suit,true);
     }
 
     static toCssClass(card) {
