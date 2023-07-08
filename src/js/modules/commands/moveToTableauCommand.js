@@ -15,7 +15,8 @@ export default class MoveToTableauCommand extends Command {
         let firstCard = this.cardsPile.bottomCard;
         let idx = this.fromPile.stack.findIndex((elem) => elem.value == firstCard.value && elem.suit.value == firstCard.suit.value);
         while (idx < this.fromPile.stack.length) {
-            this.toPile.addCard(this.fromPile.removeTopCard());
+            this.toPile.addCard(this.cardsPile.stack.shift());
+            this.fromPile.removeTopCard();
         }
         new Promise(res => eventSystem.trigger('move-cards', {
             action: "user-action",
@@ -28,7 +29,7 @@ export default class MoveToTableauCommand extends Command {
             if (!this.fromPile.isEmpty && !this.fromPile.topCard.faceUp) {
                 this.flipTableauOnUndoFlag = true;
                 this.fromPile.revealTopCard();
-                await new Promise(res=>eventSystem.trigger('flip-top-card-at-pile',{
+                await new Promise(res => eventSystem.trigger('flip-top-card-at-pile', {
                     pile: this.fromPile.snapshot(),
                     callback: res
                 }));

@@ -247,7 +247,8 @@ export default class Solitaire {
                         tableauIdx: tableau.idx,
                         evt: eventData
                     });
-                    pile.stack = tableau.stack.slice(cardIdx);
+                    //pile.stack = tableau.stack.slice(cardIdx);
+                    pile.stack = tableau.stack.slice(cardIdx).map(card=>Card.FromSnapshot(card.snapshot()));
                     this.draggedFromPile = tableau;
                 }
                 break;

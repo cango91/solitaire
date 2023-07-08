@@ -5,9 +5,10 @@ import { Pile, Waste, Tableau, Foundation, Deck } from './piles.js'
 // Define flipping animation duration in ms, should match CSS
 let FLIP_DURATION = 150;
 // Define card deal speed in px/sec
-let MOVE_SPEED = 10000;
+let MOVE_SPEED = 5000;
 // Define how long it takes to move pile from waste to deck in ms
-let WASTE_DURATION = 100;
+let DROP_SPEED = 2000;
+// de
 
 export default class Renderer {
     constructor(settings = {}) {
@@ -50,7 +51,7 @@ export default class Renderer {
             animationSpeeds = {} = {
                 flipDuration: FLIP_DURATION,
                 moveSpeed: MOVE_SPEED,
-                wasteDuration: WASTE_DURATION
+                dropSpeed: DROP_SPEED
             }
         } = {}) {
         this.enableAnimations = enableAnimations;
@@ -113,6 +114,7 @@ export default class Renderer {
         eventSystem.remove('drag-update', this._dragUpdate);
         eventSystem.remove('drag-over-bg', this.removeAllFeedback)
         eventSystem.remove('drop-over-bg', this.renderCancelDrag);
+        eventSystem.remove('invalid-drop-over-pile', this.renderCancelDrag);
 
     }
 
@@ -130,7 +132,7 @@ export default class Renderer {
         eventSystem.listen('drag-update', this._dragUpdate);
         eventSystem.listen('drag-over-bg', this.removeAllFeedback)
         eventSystem.listen('drop-over-bg', this.renderCancelDrag);
-
+        eventSystem.listen('invalid-drop-over-pile', this.renderCancelDrag);
     }
 
     renderInitialState({ deck, callback }) {
@@ -143,7 +145,6 @@ export default class Renderer {
             res();
         });
     }
-
 
     getDOM(pile) {
         const reconst = Pile.FromSnapshot(pile);
@@ -222,7 +223,7 @@ export default class Renderer {
         this.gameDOM.lastPaintedFeedack = null;
         if (this.enableAnimations) {
             // capture our visual div and moveElement to original pile
-            this._animateMoveElement(this.gameDOM.dragElement, null, this.gameDOM.draggedFromPile, this.animationSpeeds.moveSpeed)
+            this._animateMoveElement(this.gameDOM.dragElement, null, this.gameDOM.draggedFromPile, this.animationSpeeds.dropSpeed)
                 .then(() => {
                     document.body.removeChild(this.gameDOM.dragElement);
                     this.gameDOM.dragElement = null;
@@ -247,17 +248,40 @@ export default class Renderer {
 
     }
 
-    async renderFinishDrop({fromPile,toPile,cardsPile}) {
-        if(this.enableAnimations){
-
-        }else{
-            this._rebuildPileDOM(fromPile);
-            this._rebuildPileDOM(toPile);
-            document.body.removeChild(this.gameDOM.dragElement);
-            this.gameDOM.dragElement = null;
-            this.gameDOM.fakeDragDiv.draggable = false;
-            this.gameDOM.draggedFromPile = null;
-            document.querySelectorAll('.clone-pile').forEach(el => el.remove());
+    async renderFinishDrop({ fromPile, toPile, cardsPile }) {
+        if (this.enableAnimations) {
+            const toElement = this.getDOM(toPile);
+            await new Promise(res => {
+                this._animateMoveElement(this.gameDOM.dragElement, null, toElement, this.animationSpeeds.dropSpeed)
+                    .then(() => {
+                        this._rebuildPileDOM(fromPile);
+                        this._rebuildPileDOM(toPile);
+                        document.body.removeChild(this.gameDOM.dragElement);
+                        this.gameDOM.dragElement = null;
+                        this.gameDOM.fakeDragDiv.draggable = false;
+                        for (let child of this.gameDOM.draggedFromPile.children) {
+                            child.style.opacity = 1;
+                        }
+                        this.gameDOM.draggedFromPile = null;
+                        document.querySelectorAll('.clone-pile').forEach(el => el.remove());
+                        res()
+                    });
+            });
+        } else {
+            await new Promise(res => {
+                // we need to wait slightly before removing our elements,
+                // otherwise dragend won't fire
+                setTimeout(() => {
+                    this._rebuildPileDOM(fromPile);
+                    this._rebuildPileDOM(toPile);
+                    document.body.removeChild(this.gameDOM.dragElement);
+                    this.gameDOM.dragElement = null;
+                    this.gameDOM.fakeDragDiv.draggable = false;
+                    this.gameDOM.draggedFromPile = null;
+                    document.querySelectorAll('.clone-pile').forEach(el => el.remove());
+                    res();
+                }, 15);
+            });
         }
     }
 
@@ -307,9 +331,9 @@ export default class Renderer {
         if (this.gameDOM.dragElement) {
             if (this.getDOM(fromPile) === this.gameDOM.draggedFromPile) {
                 return new Promise(async res => {
-                    await this.renderFinishDrop({cardsPile, fromPile, toPile})
-                        .then(()=>{
-                            if(callback) callback();
+                    await this.renderFinishDrop({ cardsPile, fromPile, toPile })
+                        .then(() => {
+                            if (callback) callback();
                             res();
                         });
                 });
@@ -375,7 +399,7 @@ export default class Renderer {
                     card.classList.add('back');
                     card.classList.remove(slice[idx].cssClass);
                 }
-                card.draggable = slice[idx].isDraggable
+                card.draggable = !!slice[idx].isDraggable
             });
             if (callback) callback();
         }
@@ -411,7 +435,7 @@ export default class Renderer {
                     element.classList.add('back');
                     element.classList.remove(card.cssClass);
                 }
-                element.draggable = card.isDraggable;
+                element.draggable = !!card.isDraggable;
                 element.animate(stage2, options).onfinish = () => res();
             }
         });
@@ -421,9 +445,11 @@ export default class Renderer {
         const pileDOM = this.getDOM(pile);
         const truthPile = this._getCorrectPileState(pile);
         this.removeAllChildren(pileDOM);
-        truthPile.stack.forEach(card => {
-            pileDOM.append(this.decorateCardWithPile(this._makeCardElement(card), pile));
-        });
+        if (!truthPile.isEmpty) {
+            truthPile.stack.forEach(card => {
+                pileDOM.append(this.decorateCardWithPile(this._makeCardElement(card), pile));
+            });
+        }
         return pileDOM;
     }
 

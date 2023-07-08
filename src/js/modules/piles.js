@@ -82,13 +82,13 @@ export class Tableau extends Pile {
     }
 
     addCard(card) {
-        card.isDraggable = card.faceUp;
+        card.isDraggable = !!card.faceUp;
         this.stack.push(card);
     }
 
     static FromSnapshot(snapshot) {
         const pile = new this();
-        pile.stack = super.FromSnapshot(snapshot).stack.map(card => (card.isDraggable = card.faceUp, card));
+        pile.stack = super.FromSnapshot(snapshot).stack.map(card => (card.isDraggable = !!card.faceUp, card));
         pile.idx = snapshot.idx;
         return pile;
     }

@@ -42,7 +42,7 @@ renderer.initializeGameDOM(
 renderer.startRendering();
 renderer.configureSettings({ enableAnimations: false });
 const solitaire = new Solitaire();
-solitaire.initialize();
+solitaire.initialize({difficulty:1});
 
 //---- CONTROLLER(S) ----//
 
@@ -50,6 +50,7 @@ let preventDragging = false;
 
 eventSystem.listen('dealing-finished',()=>{
     preventDragging = false;
+    //renderer.configureSettings({ enableAnimations: true });
 });
 eventSystem.listen('dealing',()=>{
     preventDragging = true;
@@ -111,14 +112,12 @@ document.addEventListener('drop', (evt)=>{
                 onPile: evt.target.parentNode.id ? evt.target.parentNode.id : evt.target.id,
                 eventData: evt
             });
-            preventDragging = false;
         }else{
             eventSystem.trigger('drop-over-bg');
         }
 });
 
 document.addEventListener('dragend',evt=>{
-    console.log(evt);
     evt.preventDefault();
     preventDragging = false;
     if(evt.dataTransfer.dropEffect==="none"){
@@ -148,3 +147,4 @@ window.Renderer = Renderer;
 window.renderer = renderer;
 window.references = { deckSlot, wasteSlot, foundations, tableaux };
 window.solitaire = solitaire;
+window.setDragging = (val) => preventDragging = val;

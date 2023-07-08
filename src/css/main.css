@@ -98,7 +98,7 @@ body {
 
 @media screen and (min-width:1000px) {
     .game-container {
-        width: 80%;
+        width: 90%;
         margin: 0 auto;
         padding: 0 55px;
     }
@@ -106,7 +106,11 @@ body {
     button {
         margin-left: 0;
     }
-}
+
+    body{
+        background-color: var(--icon-base);
+    }
+} 
 
 
 /* Upper row layout */
@@ -158,7 +162,7 @@ body {
     flex-direction: column-reverse;
 }
 
-.clone-pile{
+.clone-pile {
     display: flex;
     flex-direction: column-reverse;
     justify-content: flex-start;
@@ -169,6 +173,7 @@ body {
     height: 5.5em;
     font-size: 26px;
     pointer-events: none;
+    opacity: 0.9;
 }
 
 
@@ -181,10 +186,12 @@ body {
 .card:first-child {
     margin-top: 0;
 }
-#deck-slot:not(:has(:first-child)):hover{
+
+#deck-slot:not(:has(:first-child)):hover {
     cursor: pointer;
     border-color: var(--icon-base);
 }
+
 #deck-slot:hover .card:last-child {
     box-shadow: -.25rem .25rem 0.35rem var(--icon-stroke);
     transform: translate(15px, -5px);
@@ -233,12 +240,12 @@ body {
     translate: -15px;
 }
 
-.card.large.on-waste:is(:last-child):hover{
+.card.large.on-waste:is(:last-child):hover {
     scale: 1.05;
 }
 
-.card.large.on-waste:hover{
-    scale:  1.1;
+.card.large.on-waste:hover {
+    scale: 1.1;
 }
 
 /* Show only the top-3 cards on waste pile */
@@ -336,7 +343,7 @@ body {
     align-items: center;
 }
 
-#fake-drag{
+#fake-drag {
     opacity: 0;
 }
 
@@ -350,34 +357,37 @@ body {
 .card.dragged.pile-head {
     border-top: var(--drag-border-size) solid var(--icon-highlight);
 }
+
 .slot .card:not(.back).feedback.pile-end,
 .card.dragged.pile-end {
     border-bottom: var(--drag-border-size) solid var(--icon-highlight);
 }
+
 .slot .card:not(.back).feedback.valid,
-.card.dragged.valid{
+.card.dragged.valid {
     border-color: var(--drag-border-valid);
 }
+
 .slot .card:not(.back).feedback.invalid,
-.card.dragged.invalid{
+.card.dragged.invalid {
     border-color: var(--drag-border-invalid);
     cursor: no-drop;
 }
 
-.slot .card:not(.back).feedback:not(.invalid){
+.slot .card:not(.back).feedback:not(.invalid) {
     scale: 1.1;
 }
 
-.slot.feedback.valid:empty{
+.slot.feedback.valid:empty {
     border-color: var(--drag-border-valid);
 }
 
-.slot.feedback.invalid:empty{
+.slot.feedback.invalid:empty {
     border-color: var(--drag-border-invalid);
 }
 
-.card:not(.back).valid{
-    scale:1.1;
+.card:not(.back).valid {
+    scale: 1.1;
 }
 
 /* .card.dragged:not(.card.dragged.pile-head) {

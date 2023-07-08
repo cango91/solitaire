@@ -34,7 +34,7 @@ export default class Card extends DataObject{
 
         this.value = value;
         this.suit = SUITS[suit];
-        this.faceUp = faceUp;
+        this.faceUp = !!faceUp;
         this.snapshot = this.snapshot.bind(this);
     }
 
