@@ -116,7 +116,7 @@ gameArea.addEventListener('drag', (evt)=>{
     })
 });
 
-gameArea.addEventListener('dragover', (evt) => {
+document.addEventListener('dragover', (evt) => {
     evt.preventDefault();
     if (selfOrParentCheck(evt, ".foundation")
         || selfOrParentCheck(evt, ".tableau")
@@ -125,6 +125,7 @@ gameArea.addEventListener('dragover', (evt) => {
         eventSystem.trigger('drag-over-pile', {
             action: "controller",
             overPile: evt.target.parentNode.id ? evt.target.parentNode.id : evt.target.id, // if foundation or tableau is empty, i.e. has no children
+
             eventData: evt
         });
     }else{
@@ -132,7 +133,7 @@ gameArea.addEventListener('dragover', (evt) => {
     }
 });
 
-gameArea.addEventListener('drop', (evt)=>{
+document.addEventListener('drop', (evt)=>{
     evt.preventDefault();
     if (selfOrParentCheck(evt, ".foundation")
         || selfOrParentCheck(evt, ".tableau")
@@ -147,6 +148,14 @@ gameArea.addEventListener('drop', (evt)=>{
             eventSystem.trigger('drop-over-bg');
         }
 });
+
+document.addEventListener('dragend',evt=>{
+    evt.preventDefault();
+    if(evt.dataTransfer.dropEffect==="none"){
+        eventSystem.trigger('drop-over-bg');
+    }
+
+})
 
 // click controllers
 gameArea.addEventListener('click', (evt) => {

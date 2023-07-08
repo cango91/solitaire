@@ -131,20 +131,23 @@ export default class Solitaire {
 
     async onDeckHit() {
         if (!this.acceptInput) return
-        this._disableInputs();
+        
         // if deck is full, it means we deal
         if (this.deck.isFull) {
-            await this._deal();
+            this._disableInputs();
+            await this._deal().then(()=>this._enableInputs());
             // if deck is not empty, it means we hit to waste pile
         } else if (!this.deck.isEmpty) {
+            this._disableInputs();
             const numToHit = Math.min(this.deck.stack.length, this.gameSettings.difficulty);
             const hitCmd = new HitCommand(this.deck, this.waste, numToHit);
-            await this.executeCommand(hitCmd);
+            await this.executeCommand(hitCmd).then(()=>this._enableInputs());
         } else if (!this.deck.stack.length && this.waste.stack.length) {
+            this._disableInputs();
             const collectCmd = new CollectWastePileCommand(this.waste, this.deck);
-            await this.executeCommand(collectCmd);
+            await this.executeCommand(collectCmd).then(()=>this._enableInputs());
         }
-        this._enableInputs();
+        //this._enableInputs();
     }
 
     async _deal() {

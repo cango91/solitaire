@@ -110,7 +110,7 @@ export default class Renderer {
         eventSystem.remove('invalid-drag-over-pile', this.renderInvalidDragOverPile);
         eventSystem.remove('drag-update', this._dragUpdate);
         eventSystem.remove('drag-over-bg', this.removeAllFeedback)
-        eventSystem.remove('drop-over-bg',this.renderCancelDrag);
+        eventSystem.remove('drop-over-bg', this.renderCancelDrag);
 
     }
 
@@ -127,7 +127,7 @@ export default class Renderer {
         eventSystem.listen('invalid-drag-over-pile', this.renderInvalidDragOverPile);
         eventSystem.listen('drag-update', this._dragUpdate);
         eventSystem.listen('drag-over-bg', this.removeAllFeedback)
-        eventSystem.listen('drop-over-bg',this.renderCancelDrag);
+        eventSystem.listen('drop-over-bg', this.renderCancelDrag);
 
     }
 
@@ -192,7 +192,7 @@ export default class Renderer {
         return cardElement;
     }
 
-    removeAllFeedback(){
+    removeAllFeedback() {
         this._removeDragOverFeedback();
         this._removeDraggedFeedback();
     }
@@ -204,7 +204,7 @@ export default class Renderer {
 
     renderInvalidDragOverPile(data) {
         this._repaintDraggedImage('invalid');
-        this._repaintDragoverPiles('invalid',data);
+        this._repaintDragoverPiles('invalid', data);
     }
 
     renderDragStartCard(data) {
@@ -215,20 +215,33 @@ export default class Renderer {
         this._renderDragStart(data);
     }
 
-    async renderCancelDrag(){
+    async renderCancelDrag() {
         this.removeAllFeedback();
         this.gameDOM.lastPaintedFeedack = null;
-        if(this.enableAnimations){
+        if (this.enableAnimations) {
+            // capture our visual div and moveElement to original pile
 
-        }else{
+            this._animateMoveElement(this.gameDOM.dragElement, null, this.gameDOM.draggedFromPile, this.animationSpeeds.moveSpeed)
+            .then(()=>{
+                document.body.removeChild(this.gameDOM.dragElement);
+            this.gameDOM.dragElement = null;
+            this.gameDOM.fakeDragDiv.draggable = false;
+            for (let child of this.gameDOM.draggedFromPile.children) {
+                child.style.opacity = 1;
+            }
+            this.gameDOM.draggedFromPile = null;
+            });
+
+        } else {
             document.body.removeChild(this.gameDOM.dragElement);
             this.gameDOM.dragElement = null;
             this.gameDOM.fakeDragDiv.draggable = false;
-            for(let child of this.gameDOM.draggedFromPile.children){
+            for (let child of this.gameDOM.draggedFromPile.children) {
                 child.style.opacity = 1;
             }
             this.gameDOM.draggedFromPile = null;
         }
+        
     }
 
     _renderDragStart({ card, fromPile, cardIdx, evt }) {
@@ -318,15 +331,12 @@ export default class Renderer {
         return this.renderMoveCards({ cardsPile: pile.snapshot(), fromPile, toPile, callback });
     }
 
-
-
     renderMoveCards({ cardsPile, fromPile, toPile, callback }) {
         if (this.enableAnimations) {
             return new Promise(async res => {
                 const source = this._rebuildPileDOM(fromPile);
                 const moveStack = this._getCorrectPileState(cardsPile).stack.map(card => this.decorateCardWithPile(this._makeCardElement(card), fromPile));
                 moveStack.forEach(cardEl => source.appendChild(cardEl));
-
                 const animations = moveStack.map(cardEl => this._animateMoveElement(cardEl, null, this.getDOM(toPile), this.animationSpeeds.moveSpeed));
                 await Promise.all(animations)
                     .then(() => {
@@ -447,8 +457,6 @@ export default class Renderer {
         }
     }
 
-
-
     _addCard(toElem, card, ...additional_class) {
         const cardEl = this._makeCardElement(card, ...additional_class);
         toElem.append(cardEl);
@@ -508,21 +516,21 @@ export default class Renderer {
         }
     }
 
-    _repaintDragoverPiles(cls,{overPile}){
+    _repaintDragoverPiles(cls, { overPile }) {
         //if (!this.gameDOM.dragElement) return;
-        if(!this.feedbackDragOver) return;
+        if (!this.feedbackDragOver) return;
         const pileElement = this.getDOM(overPile);
-        if(this.gameDOM.lastPaintedFeedack && this.gameDOM.lastPaintedFeedack !== pileElement){
+        if (this.gameDOM.lastPaintedFeedack && this.gameDOM.lastPaintedFeedack !== pileElement) {
             this._removeDragOverFeedback();
         }
 
-        if(pileElement.childElementCount){
-            const firstFaceUpCard = Card.FromSnapshot(overPile.stack.find(card=>!!(card&1)));
-            for(let child of pileElement.children){
-                child.classList.add('feedback',cls, child === pileElement.lastElementChild ? 'pile-end' : null);
-                if(child.classList.contains(firstFaceUpCard.cssClass)) child.classList.add('pile-head');
+        if (pileElement.childElementCount) {
+            const firstFaceUpCard = Card.FromSnapshot(overPile.stack.find(card => !!(card & 1)));
+            for (let child of pileElement.children) {
+                child.classList.add('feedback', cls, child === pileElement.lastElementChild ? 'pile-end' : null);
+                if (child.classList.contains(firstFaceUpCard.cssClass)) child.classList.add('pile-head');
             }
-        }else{
+        } else {
             console.log('no child');
         }
         this.gameDOM.lastPaintedFeedack = pileElement;
@@ -533,19 +541,19 @@ export default class Renderer {
         this.gameDOM.dragElement.style.top = `${y - 59}px`;
     }
 
-    _removeDragOverFeedback(){
+    _removeDragOverFeedback() {
         if (this.feedbackDragOver) {
             // remove all feedback classes from standing piles
-            this.gameDOM.tableauxElements.forEach(tableau=>{
-                if(tableau.childElementCount){
-                    for(let child of tableau.children){
-                        child.classList.remove('feedback','valid','invalid');
+            this.gameDOM.tableauxElements.forEach(tableau => {
+                if (tableau.childElementCount) {
+                    for (let child of tableau.children) {
+                        child.classList.remove('feedback', 'valid', 'invalid');
                     }
-                }else{
+                } else {
                     console.log('no child');
                 }
             })
-            
+
         }
     }
 
@@ -558,7 +566,4 @@ export default class Renderer {
             }
         }
     }
-
-
-
 }
