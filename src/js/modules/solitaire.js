@@ -4,6 +4,7 @@ import MoveToTableauCommand from "./commands/moveToTableauCommand.js";
 import eventSystem from "./eventSystem.js";
 import { Pile, Waste, Deck, Tableau, Foundation } from "./piles.js";
 import Card from "./card.js";
+import MoveToFoundationCommand from "./commands/moveToFoundationCommand.js";
 
 export default class Solitaire {
     acceptInput;
@@ -21,6 +22,7 @@ export default class Solitaire {
         this._getFoundationOfSuit = this._getFoundationOfSuit.bind(this);
         this._getFoundationWithId = this._getFoundationWithId.bind(this);
         this._getTableauWithId = this._getTableauWithId.bind(this);
+        this._canFoundationAccept = this._canFoundationAccept.bind(this);
         this.onCancelDrag = this.onCancelDrag.bind(this);
         this.onDropOverPile = this.onDropOverPile.bind(this);
 
@@ -42,8 +44,6 @@ export default class Solitaire {
         this.deck.shuffle();
 
         //clear & register event listeners
-        //eventSystem.remove('deck-clicked');
-        //eventSystem.remove('pile-clicked');
         eventSystem.remove('deck-hit', this.onDeckHit);
         eventSystem.remove('drag-start-card', this.onDragStartCard);
         eventSystem.remove('drag-over-pile', this.onDragOverPile);
@@ -71,7 +71,7 @@ export default class Solitaire {
                 this.foundations.push(new Foundation(i));
             this.tableaux.push(new Tableau(i));
         }
-        this.foundationSuites = {
+        this.foundationSuits = {
             0: null,
             1: null,
             2: null,
@@ -247,8 +247,7 @@ export default class Solitaire {
                         tableauIdx: tableau.idx,
                         evt: eventData
                     });
-                    //pile.stack = tableau.stack.slice(cardIdx);
-                    pile.stack = tableau.stack.slice(cardIdx).map(card=>Card.FromSnapshot(card.snapshot()));
+                    pile.stack = tableau.stack.slice(cardIdx).map(card => Card.FromSnapshot(card.snapshot()));
                     this.draggedFromPile = tableau;
                 }
                 break;
@@ -273,7 +272,13 @@ export default class Solitaire {
                 evt: eventData
             });
         } else if (overPile.startsWith('f')) {
-
+            const foundation = this._getFoundationWithId(overPile);
+            let eventName = this._canFoundationAccept(foundation,this.draggedPile) ? 'valid-drag-over-pile' : 'invalid-drag-over-pile';
+            eventSystem.trigger(eventName, {
+                action: "drag-over",
+                overPile: foundation.snapshot(),
+                evt: eventData
+            });
         }
     }
 
@@ -281,9 +286,7 @@ export default class Solitaire {
         if (!this.draggedPile) return;
         if (onPile.startsWith('t')) {
             const tableau = this._getTableauWithId(onPile);
-            let valid = tableau.allowDrop(this.draggedPile);
-            if (valid) {
-                const tableau = this._getTableauWithId(onPile);
+            if (tableau.allowDrop(this.draggedPile)) {
                 await this.executeCommand(new MoveToTableauCommand(this.draggedPile, this.draggedFromPile, tableau));
             } else {
                 eventSystem.trigger('invalid-drop-over-pile', {
@@ -292,13 +295,23 @@ export default class Solitaire {
                     evt: eventData
                 });
             }
-        } else {
-
+        } else if(onPile.startsWith('f')){
+            const foundation = this._getFoundationWithId(onPile);
+            if(this._canFoundationAccept(foundation,this.draggedPile)){
+                await this.executeCommand(new MoveToFoundationCommand(this.draggedPile,this.draggedFromPile,foundation));
+            }else{
+                eventSystem.trigger('invalid-drop-over-pile', {
+                    action: "drop",
+                    onPile: foundation.snapshot(),
+                    evt: eventData
+                });
+            }
         }
+        this._updateFoundationSuits();
     }
 
     _getFoundationOfSuit(suit) {
-        return this.foundationSuites[suit.value];
+        return this.foundationSuits[suit.value];
     }
 
 
@@ -312,5 +325,27 @@ export default class Solitaire {
         if (!strId.startsWith('f')) throw new Error(`Invalid foundation string ID: ${strId}`);
         const foundationIdx = Number(strId.substring(strId.length - 1)) - 1;
         return this.foundations[foundationIdx];
+    }
+
+    _canFoundationAccept(foundation, pile) {
+        const suit = pile.topCard.suit;
+        const idx = foundation.idx;
+        let existingFoundationIdx = Object.values(this.foundationSuits).findIndex(val => {
+            return val && val.value == suit.value;
+        });
+        if (existingFoundationIdx >= 0) {
+            if (existingFoundationIdx === idx) {
+                return foundation.allowDrop(pile);
+            }
+            return false;
+        }else{
+            return foundation.allowDrop(pile);
+        }
+    }
+
+    _updateFoundationSuits(){
+        this.foundations.forEach((foundation,idx)=>{
+            this.foundationSuits[idx] = foundation.isEmpty ? null : foundation.topCard.suit;
+        })
     }
 }

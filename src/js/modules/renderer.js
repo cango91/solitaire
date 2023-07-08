@@ -8,7 +8,6 @@ let FLIP_DURATION = 150;
 let MOVE_SPEED = 5000;
 // Define how long it takes to move pile from waste to deck in ms
 let DROP_SPEED = 2000;
-// de
 
 export default class Renderer {
     constructor(settings = {}) {
@@ -565,6 +564,14 @@ export default class Renderer {
                     }
                 }
             });
+            this.gameDOM.foundationElements.forEach(foundation=>{
+                foundation.classList.remove('feedback','valid','invalid');
+                if(foundation.childElementCount){
+                    for(let child of foundation.children){
+                        child.classList.remove('feedback','valid','invalid');
+                    }
+                }
+            })
             if (this.gameDOM.lastPaintedFeedack) {
                 this.gameDOM.lastPaintedFeedack.classList.remove('feedback', 'valid', 'invalid');
             }

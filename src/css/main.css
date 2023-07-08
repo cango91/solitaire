@@ -27,6 +27,9 @@
 
     --drag-border-valid: #5CBE8E;
     --drag-border-invalid: #ff0000;
+
+    --foundation-bg: #b1b1a0;
+    --waste-bg: #9a88a0;
 }
 
 html {
@@ -142,6 +145,7 @@ body {
 
 .slot.foundation {
     display: block;
+    background-color: var(--foundation-bg);
 }
 
 .slot.foundation .card {
@@ -149,13 +153,24 @@ body {
     margin-top: 0;
 }
 
-.slot.foundation:hover .card:last-child {
+.slot.foundation:hover .card:last-child:not(:only-child) {
     box-shadow: -.25rem .0 0.35rem var(--icon-stroke);
     transform: translate(15px, 5px);
 }
 
+.slot.foundation:hover .card:last-child {
+    box-shadow: -.25rem .0 0.35rem var(--icon-stroke);
+    scale: 1.05;;
+}
+
+
+
 .slot.large {
     font-size: 26px;
+}
+
+#waste-slot{
+    background-color: var(--waste-bg);
 }
 
 .tableau {
@@ -374,8 +389,14 @@ body {
     cursor: no-drop;
 }
 
+.slot .card:not(.back)
+
 .slot .card:not(.back).feedback:not(.invalid) {
     scale: 1.1;
+}
+
+.slot.foundation .card.feedback:last-of-type{
+    border-width: var(--drag-border-size);    
 }
 
 .slot.feedback.valid:empty {
@@ -385,6 +406,8 @@ body {
 .slot.feedback.invalid:empty {
     border-color: var(--drag-border-invalid);
 }
+
+
 
 .card:not(.back).valid {
     scale: 1.1;

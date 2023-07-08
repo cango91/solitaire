@@ -1,5 +1,5 @@
 import { Pile, Tableau, Waste, Foundation, Deck } from "./piles.js";
-import Card from "./card.js";
+import Card, {SUITS} from "./card.js";
 
 test("Pile functionality", () => {
     const pile = new Pile();
@@ -284,7 +284,7 @@ test("Non-empty tableau rejects card with correct color but wrong value",()=>{
     expect(tableau.allowDrop(new Card(12,'d',true))).toBe(false);
 });
 
-describe("tableau.allowDrop",()=>{
+describe("Tableau",()=>{
     let tableau;
     let pile1, pile2, pile3, pile4;
     let hPileArray;
@@ -305,7 +305,7 @@ describe("tableau.allowDrop",()=>{
         cPileArray = [Card.fromCssClass('cK'),Card.fromCssClass('dQ')];
     });
 
-    it("should accept Pile starting with K of any color, if it is empty",()=>{
+    it("allowDrop should accept Pile starting with K of any color, if it is empty",()=>{
         pile1.stack = dPileArray;
         pile2.stack = hPileArray;
         pile3.stack = sPileArray;
@@ -316,7 +316,7 @@ describe("tableau.allowDrop",()=>{
         expect(tableau.allowDrop(pile4)).toBe(true);
     });
 
-    it("should reject Pile starting with other than K, if it is empty",()=>{
+    it("allowDrop should reject Pile starting with other than K, if it is empty",()=>{
         pile1.stack = dPileArray.reverse();
         pile2.stack = hPileArray.reverse();
         pile3.stack = sPileArray.reverse();
@@ -327,7 +327,7 @@ describe("tableau.allowDrop",()=>{
         expect(tableau.allowDrop(pile4)).toBe(false);
     });
 
-    it("should accept vallid piles if it is not empty",()=>{
+    it("allowDrop should accept vallid piles if it is not empty",()=>{
         const validContinuationArray = [Card.fromCssClass('dJ'), Card.fromCssClass('c10')];
         tableau.stack = dPileArray;
         pile1.stack = validContinuationArray;
@@ -337,3 +337,51 @@ describe("tableau.allowDrop",()=>{
     });
 
 });
+
+describe("Foundation", () => {
+    let foundation;
+    beforeEach(() => {
+      foundation = new Foundation();
+    });
+  
+    test("allowDrop should return true when the foundation is empty and pile has top card of value 1", () => {
+      const card = new Card(1, SUITS.CLUBS.name);
+      const pile = new Pile();
+      pile.addCard(card);
+      expect(foundation.allowDrop(pile)).toBeTruthy();
+    });
+  
+    test("allowDrop should return false when the foundation is empty and pile has top card of value not equal to 1", () => {
+      const card = new Card(2, SUITS.CLUBS.name);
+      const pile = new Pile();
+      pile.addCard(card);
+      expect(foundation.allowDrop(pile)).toBeFalsy();
+    });
+  
+    test("allowDrop should return true when the foundation has top card and pile top card's value is one more than foundation top card's value and they have same suit", () => {
+      const foundationCard = new Card(1, SUITS.CLUBS.name);
+      const pileCard = new Card(2, SUITS.CLUBS.name);
+      const pile = new Pile();
+      pile.addCard(pileCard);
+      foundation.addCard(foundationCard);
+      expect(foundation.allowDrop(pile)).toBeTruthy();
+    });
+  
+    test("allowDrop should return false when the foundation has top card and pile top card's value is not one more than foundation top card's value", () => {
+      const foundationCard = new Card(1, SUITS.CLUBS.name);
+      const pileCard = new Card(3, SUITS.CLUBS.name);
+      const pile = new Pile();
+      pile.addCard(pileCard);
+      foundation.addCard(foundationCard);
+      expect(foundation.allowDrop(pile)).toBeFalsy();
+    });
+  
+    test("allowDrop should return false when the foundation has top card and pile top card's value is one more than foundation top card's value but they do not have same suit", () => {
+      const foundationCard = new Card(1, SUITS.CLUBS.name);
+      const pileCard = new Card(2, SUITS.HEARTS.name);
+      const pile = new Pile();
+      pile.addCard(pileCard);
+      foundation.addCard(foundationCard);
+      expect(foundation.allowDrop(pile)).toBeFalsy();
+    });
+  });

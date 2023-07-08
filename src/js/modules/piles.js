@@ -36,8 +36,11 @@ export class Pile extends DataObject {
     }
 
     removeTopCard() {
-        this.topCard.isDraggable = false;
-        return this.stack.pop();
+        if (this.topCard) {
+            this.topCard.isDraggable = false;
+            return this.stack.pop();
+        }
+
     }
 
     addCard(card) {
@@ -100,8 +103,10 @@ export class Tableau extends Pile {
     }
 
     revealTopCard() {
-        this.topCard.faceUp = true;
-        this.topCard.isDraggable = true;
+        if (this.topCard) {
+            this.topCard.faceUp = true;
+            this.topCard.isDraggable = true;
+        }
     }
 
     allowDrop(pileOrCard) {
@@ -162,7 +167,8 @@ export class Foundation extends Pile {
     static FromSnapshot(snapshot) {
         const pile = new this();
         pile.stack = super.FromSnapshot(snapshot).stack;
-        pile.topCard.isDraggable = true;
+        if (pile.topCard)
+            pile.topCard.isDraggable = true;
         pile.idx = snapshot.idx;
         return pile;
     }
@@ -190,18 +196,15 @@ export class Foundation extends Pile {
         return card;
     }
 
-    allowDrop(pileOrCard) {
-        if (!pileOrCard instanceof Card) return false;
-        if (this.stack.length) {
-            if (this.topCard.suit.value === pileOrCard.suit.value && this.topCard.value == pileOrCard.value - 1)
-                return true;
+    allowDrop(pile) {
+        if (pile.stack.length > 1)
             return false;
-        } else {
-            if (pileOrCard.value == 1)
-                return true;
-            return false;
-        }
+        if (this.isEmpty && pile.topCard.value == 1)
+            return true;
+        if (!this.isEmpty && pile.topCard.value == this.topCard.value + 1)
+            return !!(this.topCard.suit.value == pile.topCard.suit.value);
     }
+
     get isFull() {
         return this.stack.length === 13;
     }
