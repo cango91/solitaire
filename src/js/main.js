@@ -47,13 +47,16 @@ solitaire.initialize({difficulty:1});
 //---- CONTROLLER(S) ----//
 
 let preventDragging = false;
+const reportDragging = ()=>console.log(`Dragging ${preventDragging ? `disable` : `enabled`}`);
 
 eventSystem.listen('dealing-finished',()=>{
     preventDragging = false;
+    reportDragging();
     //renderer.configureSettings({ enableAnimations: true });
 });
 eventSystem.listen('dealing',()=>{
     preventDragging = true;
+    reportDragging();
 })
 
 // drag controllers
@@ -74,6 +77,7 @@ gameArea.addEventListener('dragstart', (evt) => {
         });
         evt.dataTransfer.effectAllowed = "move";
         preventDragging=true;
+        reportDragging();
     }
 });
 
@@ -120,6 +124,7 @@ document.addEventListener('drop', (evt)=>{
 document.addEventListener('dragend',evt=>{
     evt.preventDefault();
     preventDragging = false;
+    reportDragging();
     if(evt.dataTransfer.dropEffect==="none"){
         eventSystem.trigger('drop-over-bg');
     }

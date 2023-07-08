@@ -1,5 +1,6 @@
 import { Command } from "../command.js";
 import eventSystem from "../eventSystem.js";
+import { Pile } from "../piles.js";
 
 
 export default class MoveToFoundationCommand extends Command{
@@ -33,6 +34,25 @@ export default class MoveToFoundationCommand extends Command{
     }
 
     async undo(){
-
+        new Promise(async res=>{
+            if(this.flipTableauOnUndoFlag){
+                this.fromPile.hideTopCard();
+                await new Promise(resolve=>eventSystem.trigger('flip-top-card-at-pile', {
+                    pile: this.fromPile.snapshot(),
+                    callback: resolve
+                }));
+                this.flipTableauOnUndoFlag != this.flipTableauOnUndoFlag;
+            }
+            res();
+        }).then(async ()=>{
+            this.fromPile.addCard(this.toPile.removeTopCard());
+            new Promise(res=>eventSystem.trigger('move-cards', {
+                action: "undo-user-action",
+                cardsPile: this.dragPile.snapshot(),
+                fromPile: this.toPile.snapshot(),
+                toPile: this.fromPile.snapshot(),
+                callback: res
+            }));
+        });
     }
 }

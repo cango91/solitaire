@@ -1,5 +1,6 @@
 import { Command } from "../command.js";
 import eventSystem from "../eventSystem.js";
+import Card from "../card.js";
 
 export default class MoveToTableauCommand extends Command {
     constructor(cardsPile, fromPile, toPile) {
@@ -8,6 +9,7 @@ export default class MoveToTableauCommand extends Command {
         this.fromPile = fromPile;
         this.toPile = toPile;
         this.flipTableauOnUndoFlag = false;
+        this.count = cardsPile.stack.length; 
     }
 
     async execute() {
@@ -37,6 +39,33 @@ export default class MoveToTableauCommand extends Command {
         });
     }
     async undo() {
-
+        new Promise(async res => {
+            if (this.flipTableauOnUndoFlag) {
+                this.fromPile.hideTopCard();
+                await new Promise(resolve => eventSystem.trigger('flip-top-card-at-pile', {
+                    pile: this.fromPile.snapshot(),
+                    callback: resolve
+                }));
+                this.flipTableauOnUndoFlag != this.flipTableauOnUndoFlag
+            }
+            res();
+        }).then(async ()=>{
+            console.log('count:',this.count)
+            let beginIdx = this.toPile.stack.length - this.count;
+            let endIdx = this.toPile.stack.length;
+            console.log(`begin:${beginIdx}, end:${endIdx}`);
+            for(let i =beginIdx; i<endIdx;i++){
+                const card = this.toPile.stack.splice(beginIdx,1)[0];
+                this.cardsPile.addCard(Card.FromSnapshot(card.snapshot()));
+                this.fromPile.addCard(card);
+            }
+            await new Promise(res => eventSystem.trigger('move-cards', {
+                action: "undo-user-action",
+                cardsPile: this.cardsPile.snapshot(),
+                fromPile: this.toPile.snapshot(),
+                toPile: this.fromPile.snapshot(),
+                callback: res
+            }));
+        });
     }
 }

@@ -109,6 +109,13 @@ export class Tableau extends Pile {
         }
     }
 
+    hideTopCard() {
+        if(this.topCard){
+            this.topCard.faceUp = false;
+            this.topCard.isDraggable = false;
+        }
+    }
+
     allowDrop(pileOrCard) {
         if (pileOrCard instanceof Card) {
             if (!this.stack.length) return pileOrCard.value == 13 && pileOrCard.faceUp;
