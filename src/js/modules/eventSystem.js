@@ -30,9 +30,13 @@ class EventSystem {
             eventData.callback();
         }
     }
-    remove(eventName){
+    remove(eventName,cb){
         if(this.listeners[eventName])
-            this.listeners[eventName] = [];
+        try{
+            this.listeners[eventName] = this.listeners[eventName].splice(this.listeners[eventName].findIndex((c)=>c===cb),1);
+        }catch (e){
+            console.log(e);
+        }
     }
     
 }

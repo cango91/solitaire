@@ -37,6 +37,7 @@ export default class Renderer {
         this._removeDraggedFeedback = this._removeDraggedFeedback.bind(this);
         this._removeDragOverFeedback = this._removeDragOverFeedback.bind(this);
         this.removeAllFeedback = this.removeAllFeedback.bind(this);
+        this.renderCancelDrag = this.renderCancelDrag.bind(this);
 
     }
 
@@ -73,6 +74,7 @@ export default class Renderer {
         this.gameDOM.fakeDragDiv = fakeDragDiv;
         this.gameDOM.dragElement = null;
         this.gameDOM.lastPaintedFeedack = null;
+        this.gameDOM.draggedFromPile = null;
     }
 
     startRendering() {
@@ -96,18 +98,19 @@ export default class Renderer {
     }
 
     clearListeners() {
-        eventSystem.remove('game-initialized');
-        eventSystem.remove('move-card');
-        eventSystem.remove('flip-top-card-at-pile');
-        eventSystem.remove('flip-top-n-cards-at-pile');
-        eventSystem.remove('move-cards');
-        eventSystem.remove('flip-pile');
-        eventSystem.remove('validated-drag-start-card');
-        eventSystem.remove('validated-drag-start-pile');
-        eventSystem.remove('valid-drag-over-pile');
-        eventSystem.remove('invalid-drag-over-pile');
-        eventSystem.remove('drag-update');
-        eventSystem.remove('drag-over-bg');
+        eventSystem.remove('game-initialized', this.renderInitialState);
+        eventSystem.remove('move-card', this.renderMoveCard);
+        eventSystem.remove('move-cards', this.renderMoveCards);
+        eventSystem.remove('flip-top-card-at-pile', this.renderFlipTopCardAtPile);
+        eventSystem.remove('flip-top-n-cards-at-pile', this.renderFlipNCardsAtPile);
+        eventSystem.remove('flip-pile', this.renderFlipPile);
+        eventSystem.remove('validated-drag-start-card', this.renderDragStartCard);
+        eventSystem.remove('validated-drag-start-pile', this.renderDragStartPile);
+        eventSystem.remove('valid-drag-over-pile', this.renderValidDragOverPile);
+        eventSystem.remove('invalid-drag-over-pile', this.renderInvalidDragOverPile);
+        eventSystem.remove('drag-update', this._dragUpdate);
+        eventSystem.remove('drag-over-bg', this.removeAllFeedback)
+        eventSystem.remove('drop-over-bg',this.renderCancelDrag);
 
     }
 
@@ -124,6 +127,7 @@ export default class Renderer {
         eventSystem.listen('invalid-drag-over-pile', this.renderInvalidDragOverPile);
         eventSystem.listen('drag-update', this._dragUpdate);
         eventSystem.listen('drag-over-bg', this.removeAllFeedback)
+        eventSystem.listen('drop-over-bg',this.renderCancelDrag);
 
     }
 
@@ -188,6 +192,11 @@ export default class Renderer {
         return cardElement;
     }
 
+    removeAllFeedback(){
+        this._removeDragOverFeedback();
+        this._removeDraggedFeedback();
+    }
+
     renderValidDragOverPile(data) {
         this._repaintDraggedImage('valid');
         this._repaintDragoverPiles('valid', data);
@@ -206,8 +215,25 @@ export default class Renderer {
         this._renderDragStart(data);
     }
 
+    async renderCancelDrag(){
+        this.removeAllFeedback();
+        this.gameDOM.lastPaintedFeedack = null;
+        if(this.enableAnimations){
+
+        }else{
+            document.body.removeChild(this.gameDOM.dragElement);
+            this.gameDOM.dragElement = null;
+            this.gameDOM.fakeDragDiv.draggable = false;
+            for(let child of this.gameDOM.draggedFromPile.children){
+                child.style.opacity = 1;
+            }
+            this.gameDOM.draggedFromPile = null;
+        }
+    }
+
     _renderDragStart({ card, fromPile, cardIdx, evt }) {
         const pileDOM = this.getDOM(fromPile);
+        this.gameDOM.draggedFromPile = pileDOM;
         this.gameDOM.fakeDragDiv.draggable = true;
         evt.dataTransfer.setDragImage(this.gameDOM.fakeDragDiv, 0, 0);
         const pileContainer = document.createElement('div');
@@ -533,9 +559,6 @@ export default class Renderer {
         }
     }
 
-    removeAllFeedback(){
-        this._removeDragOverFeedback();
-        this._removeDraggedFeedback();
-    }
+
 
 }

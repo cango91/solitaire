@@ -134,25 +134,19 @@ gameArea.addEventListener('dragover', (evt) => {
 
 gameArea.addEventListener('drop', (evt)=>{
     evt.preventDefault();
-    
-})
-
-// tableaux[0].addEventListener('dragover', evt => {
-//     evt.preventDefault();
-//     // evt.dataTransfer.dropEffect = 'move';
-//     console.log('dragged over');
-// })
-// tableaux[0].addEventListener('dragenter', evt => {
-//     console.log('enter')
-
-// })
-// tableaux[0].addEventListener('dragleave', evt => {
-//     console.log('leave')
-// })
-// tableaux[0].addEventListener('drop', evt => {
-//     evt.preventDefault();
-//     console.log('dropped on foundation 1')
-// })
+    if (selfOrParentCheck(evt, ".foundation")
+        || selfOrParentCheck(evt, ".tableau")
+        || selfOrParentCheck(evt, '.on-tableau')
+        || selfOrParentCheck(evt, '.on-foundation')) {
+            eventSystem.trigger('drop-over-pile',{
+                action: "controller",
+                onPile: evt.target.parentNode.id ? evt.target.parentNode.id : evt.target.id,
+                eventData: evt
+            });
+        }else{
+            eventSystem.trigger('drop-over-bg');
+        }
+});
 
 // click controllers
 gameArea.addEventListener('click', (evt) => {

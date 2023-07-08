@@ -19,6 +19,7 @@ export default class Solitaire {
         this._getFoundationOfSuit = this._getFoundationOfSuit.bind(this);
         this._getFoundationWithId = this._getFoundationWithId.bind(this);
         this._getTableauWithId = this._getTableauWithId.bind(this);
+        this.onCancelDrag = this.onCancelDrag.bind(this);
 
     }
 
@@ -38,14 +39,17 @@ export default class Solitaire {
         this.deck.shuffle();
 
         //clear & register event listeners
-        eventSystem.remove('deck-clicked');
-        eventSystem.remove('pile-clicked');
-        eventSystem.remove('drag-start-card');
-        eventSystem.remove('drag-over-pile');
+        //eventSystem.remove('deck-clicked');
+        //eventSystem.remove('pile-clicked');
+        eventSystem.remove('deck-hit',this.onDeckHit);
+        eventSystem.remove('drag-start-card',this.onDragStartCard);
+        eventSystem.remove('drag-over-pile',this.onDragOverPile);
+        eventSystem.remove('drop-over-bg',this.onCancelDrag);
 
         eventSystem.listen('deck-hit', this.onDeckHit);
         eventSystem.listen('drag-start-card', this.onDragStartCard)
         eventSystem.listen('drag-over-pile', this.onDragOverPile);
+        eventSystem.listen('drop-over-bg', this.onCancelDrag);
 
         eventSystem.trigger('game-initialized', { settings: this.gameSettings, deck: this.deck.snapshot() });
         this._enableInputs();
@@ -119,6 +123,10 @@ export default class Solitaire {
         this._disableInputs();
         this._dragStart(data);
         this._enableInputs();
+    }
+
+    onCancelDrag(){
+        this.draggedPile = null;
     }
 
     async onDeckHit() {
