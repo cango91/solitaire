@@ -21,9 +21,20 @@ export default class HitCommand extends Command {
             this.waste.addCard(card);
             numToRemove--;
         }
-        return new Promise(res => eventSystem.trigger('move-cards', { action: "hit", cardsPile: movedCards.snapshot(), fromPile: this.deck.snapshot(), toPile: this.waste.snapshot(), callback: res }))
+        return new Promise(res => eventSystem.trigger('move-cards', {
+            action: "hit",
+            cardsPile: movedCards.snapshot(),
+            fromPile: this.deck.snapshot(),
+            toPile: this.waste.snapshot(),
+            callback: res
+        }))
             .then(async () => {
-                await new Promise(res => eventSystem.trigger('flip-top-n-cards-at-pile', { action: "hit", pile: this.waste.snapshot(), numCards: this.numHit, callback:res}));
+                await new Promise(res => eventSystem.trigger('flip-top-n-cards-at-pile', {
+                    action: "hit",
+                    pile: this.waste.snapshot(),
+                    numCards: this.numHit,
+                    callback: res
+                }));
             });
     }
 
@@ -37,9 +48,21 @@ export default class HitCommand extends Command {
             this.deck.addCard(card);
             numToRemove--;
         }
-        return new Promise(res => eventSystem.trigger('move-cards', { action: "undo-hit", cardsPile: movedCards.snapshot(), fromPile: this.waste.snapshot(), toPile: this.deck.snapshot(), callback: res }))
+        return new Promise(res => eventSystem.trigger('move-cards',
+            {
+                action: "undo-hit",
+                cardsPile: movedCards.snapshot(),
+                fromPile: this.waste.snapshot(),
+                toPile: this.deck.snapshot(),
+                callback: res
+            }))
             .then(async () => {
-                await new Promise(res => eventSystem.trigger('flip-top-n-cards-at-pile', { action: "undo-hit", pile: this.deck.snapshot(), numCards: this.numHit, callback: res }))
+                await new Promise(res => eventSystem.trigger('flip-top-n-cards-at-pile', {
+                    action: "undo-hit",
+                    pile: this.deck.snapshot(),
+                    numCards: this.numHit,
+                    callback: res
+                }))
             });
     }
 }

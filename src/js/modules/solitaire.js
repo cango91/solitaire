@@ -1,7 +1,9 @@
 import CollectWastePileCommand from "./commands/collectWastePileCommand.js";
 import HitCommand from "./commands/hitCommand.js";
+import MoveToTableauCommand from "./commands/moveToTableauCommand.js";
 import eventSystem from "./eventSystem.js";
 import { Pile, Waste, Deck, Tableau, Foundation } from "./piles.js";
+import Card from "./card.js";
 
 export default class Solitaire {
     acceptInput;
@@ -20,6 +22,7 @@ export default class Solitaire {
         this._getFoundationWithId = this._getFoundationWithId.bind(this);
         this._getTableauWithId = this._getTableauWithId.bind(this);
         this.onCancelDrag = this.onCancelDrag.bind(this);
+        this.onDropOverPile = this.onDropOverPile.bind(this);
 
     }
 
@@ -41,15 +44,18 @@ export default class Solitaire {
         //clear & register event listeners
         //eventSystem.remove('deck-clicked');
         //eventSystem.remove('pile-clicked');
-        eventSystem.remove('deck-hit',this.onDeckHit);
-        eventSystem.remove('drag-start-card',this.onDragStartCard);
-        eventSystem.remove('drag-over-pile',this.onDragOverPile);
-        eventSystem.remove('drop-over-bg',this.onCancelDrag);
+        eventSystem.remove('deck-hit', this.onDeckHit);
+        eventSystem.remove('drag-start-card', this.onDragStartCard);
+        eventSystem.remove('drag-over-pile', this.onDragOverPile);
+        eventSystem.remove('drop-over-bg', this.onCancelDrag);
+        eventSystem.remove('drop-over-pile', this.onDropOverPile);
 
         eventSystem.listen('deck-hit', this.onDeckHit);
         eventSystem.listen('drag-start-card', this.onDragStartCard)
         eventSystem.listen('drag-over-pile', this.onDragOverPile);
         eventSystem.listen('drop-over-bg', this.onCancelDrag);
+        eventSystem.listen('drop-over-pile', this.onDropOverPile);
+
 
         eventSystem.trigger('game-initialized', { settings: this.gameSettings, deck: this.deck.snapshot() });
         this._enableInputs();
@@ -72,6 +78,7 @@ export default class Solitaire {
             3: null
         };
         this.draggedPile = null;
+        this.draggedFromPile = null;
     }
 
     async executeCommand(command) {
@@ -109,6 +116,13 @@ export default class Solitaire {
 
     //---- GAME EVENT HANDLING ----//
 
+    onDropOverPile(data) {
+        if (!this.acceptInput) return;
+        this._disableInputs();
+        this._dropOverPile(data);
+        this._enableInputs();
+    }
+
     onDragOverPile(data) {
         //console.log('hey');
         if (!this.acceptInput) return;
@@ -125,32 +139,35 @@ export default class Solitaire {
         this._enableInputs();
     }
 
-    onCancelDrag(){
+    onCancelDrag() {
         this.draggedPile = null;
     }
 
     async onDeckHit() {
         if (!this.acceptInput) return
-        
         // if deck is full, it means we deal
         if (this.deck.isFull) {
             this._disableInputs();
-            await this._deal().then(()=>this._enableInputs());
+            eventSystem.trigger('dealing')
+            await this._deal().then(() => {
+                eventSystem.trigger('dealing-finished');
+                this._enableInputs();
+            });
             // if deck is not empty, it means we hit to waste pile
         } else if (!this.deck.isEmpty) {
             this._disableInputs();
             const numToHit = Math.min(this.deck.stack.length, this.gameSettings.difficulty);
             const hitCmd = new HitCommand(this.deck, this.waste, numToHit);
-            await this.executeCommand(hitCmd).then(()=>this._enableInputs());
+            await this.executeCommand(hitCmd).then(() => this._enableInputs());
         } else if (!this.deck.stack.length && this.waste.stack.length) {
             this._disableInputs();
             const collectCmd = new CollectWastePileCommand(this.waste, this.deck);
-            await this.executeCommand(collectCmd).then(()=>this._enableInputs());
+            await this.executeCommand(collectCmd).then(() => this._enableInputs());
         }
-        //this._enableInputs();
     }
 
     async _deal() {
+
         for (let i = 0; i < this.tableaux.length; i++) {
             const t = this.tableaux.slice(i);
             for (const tableau of t) {
@@ -197,6 +214,7 @@ export default class Solitaire {
                         evt: eventData
                     });
                     pile.stack = [Card.FromSnapshot(card.snapshot())];
+                    this.draggedFromPile = this.waste;
                 }
                 break;
             case 'f':
@@ -212,7 +230,8 @@ export default class Solitaire {
                         foundationIdx: foundation.idx,
                         evt: eventData
                     });
-                    pile.stack = [Card.FromSnapshot(card.snapshot())]
+                    pile.stack = [Card.FromSnapshot(card.snapshot())];
+                    this.draggedFromPile = foundation;
                 }
                 break;
             case 't':
@@ -229,13 +248,17 @@ export default class Solitaire {
                         evt: eventData
                     });
                     pile.stack = tableau.stack.slice(cardIdx);
+                    this.draggedFromPile = tableau;
                 }
                 break;
             default:
                 console.error('An error occured at drag-start-card event handler');
                 break;
         }
-        this.draggedPile = Pile.FromSnapshot(pile.snapshot());
+        if (!pile.isEmpty)
+            this.draggedPile = pile;
+        else
+            throw new Error(`Can't start drag`);
     }
 
     _dragOver({ overPile, eventData }) {
@@ -248,6 +271,26 @@ export default class Solitaire {
                 overPile: tableau.snapshot(),
                 evt: eventData
             });
+        } else if (overPile.startsWith('f')) {
+
+        }
+    }
+
+    async _dropOverPile({ onPile, eventData }) {
+        if (!this.draggedPile) return;
+        if (onPile.startsWith('t')) {
+            const tableau = this._getTableauWithId(onPile);
+            let valid = tableau.allowDrop(this.draggedPile);
+            if (valid) {
+                const tableau = this._getTableauWithId(onPile);
+                await this.executeCommand(new MoveToTableauCommand(this.draggedPile, this.draggedFromPile, tableau));
+            } else {
+                eventSystem.trigger('invalid-drop-over-pile', {
+                    action: "drop",
+                    onPile: tableau.snapshot(),
+                    evt: eventData
+                });
+            }
         } else {
 
         }

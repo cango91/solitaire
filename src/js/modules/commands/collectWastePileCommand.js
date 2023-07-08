@@ -19,9 +19,19 @@ export default class CollectWastePileCommand extends Command {
             card.faceUp = false;
             this.deck.addCard(card);
         }
-        await new Promise(res => eventSystem.trigger('move-cards', { action: "collect-waste", cardsPile: movedCards.snapshot(), fromPile: this.waste.snapshot(), toPile: this.deck.snapshot(), callback: res }))
+        await new Promise(res => eventSystem.trigger('move-cards', {
+            action: "collect-waste",
+            cardsPile: movedCards.snapshot(),
+            fromPile: this.waste.snapshot(),
+            toPile: this.deck.snapshot(),
+            callback: res
+        }))
             .then(async () => {
-                await new Promise(res => eventSystem.trigger('flip-pile', { action: "collect-waste", pile: this.deck.snapshot(), callback: res }))
+                await new Promise(res => eventSystem.trigger('flip-pile', {
+                    action: "collect-waste",
+                    pile: this.deck.snapshot(),
+                    callback: res
+                }))
             });
     }
 
@@ -33,9 +43,19 @@ export default class CollectWastePileCommand extends Command {
             card.faceUp = true;
             this.waste.addCard(card);
         }
-        await new Promise(res => eventSystem.trigger('move-cards', { action: "undo-collect-waste", cardsPile: movedCards.snapshot(), fromPile: this.deck.snapshot(), toPile: this.waste.snapshot(), callback: res }))
+        await new Promise(res => eventSystem.trigger('move-cards', {
+            action: "undo-collect-waste",
+            cardsPile: movedCards.snapshot(),
+            fromPile: this.deck.snapshot(),
+            toPile: this.waste.snapshot(),
+            callback: res
+        }))
             .then(async () => {
-                await new Promise(res => eventSystem.trigger('flip-pile', { action: "undo-collect-waste", pile: this.waste.snapshot(), callback: res }))
+                await new Promise(res => eventSystem.trigger('flip-pile', {
+                    action: "undo-collect-waste",
+                    pile: this.waste.snapshot(),
+                    callback: res
+                }))
             });
     }
 }

@@ -19,16 +19,16 @@ export class Pile extends DataObject {
             return this.stack[0];
     }
 
-    getCardAt(idx){
-        if(this.stack.length>idx && idx>-1)
+    getCardAt(idx) {
+        if (this.stack.length > idx && idx > -1)
             return this.stack[idx];
         return null;
     }
 
-    getCardIdx(card){
-        if(!card instanceof Card)
+    getCardIdx(card) {
+        if (!card instanceof Card)
             return null;
-        return this.stack.findIndex(c=>c.value == card.value && c.suit.value == card.suit.value);
+        return this.stack.findIndex(c => c.value == card.value && c.suit.value == card.suit.value);
     }
 
     get isEmpty() {
@@ -252,7 +252,7 @@ export class Deck extends Pile {
         this.isShuffled = true;
     }
 
-    get isFull(){
+    get isFull() {
         return this.stack.length === 52;
     }
 }

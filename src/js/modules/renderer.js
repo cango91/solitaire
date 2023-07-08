@@ -5,7 +5,7 @@ import { Pile, Waste, Tableau, Foundation, Deck } from './piles.js'
 // Define flipping animation duration in ms, should match CSS
 let FLIP_DURATION = 150;
 // Define card deal speed in px/sec
-let MOVE_SPEED = 3000;
+let MOVE_SPEED = 10000;
 // Define how long it takes to move pile from waste to deck in ms
 let WASTE_DURATION = 100;
 
@@ -16,6 +16,7 @@ export default class Renderer {
         this.gameDOM = {};
         this.gameDOM.tableauxElements = [];
         this.gameDOM.foundationElements = [];
+        this._draggablesState = [];
 
         this.configureSettings = this.configureSettings.bind(this);
         this.removeAllChildren = this.removeAllChildren.bind(this);
@@ -81,6 +82,7 @@ export default class Renderer {
         this.clearDOM();
         this.clearListeners();
         this.attachListeners();
+        this.removeAllFeedback();
     }
 
     removeAllChildren(element) {
@@ -220,17 +222,17 @@ export default class Renderer {
         this.gameDOM.lastPaintedFeedack = null;
         if (this.enableAnimations) {
             // capture our visual div and moveElement to original pile
-
             this._animateMoveElement(this.gameDOM.dragElement, null, this.gameDOM.draggedFromPile, this.animationSpeeds.moveSpeed)
-            .then(()=>{
-                document.body.removeChild(this.gameDOM.dragElement);
-            this.gameDOM.dragElement = null;
-            this.gameDOM.fakeDragDiv.draggable = false;
-            for (let child of this.gameDOM.draggedFromPile.children) {
-                child.style.opacity = 1;
-            }
-            this.gameDOM.draggedFromPile = null;
-            });
+                .then(() => {
+                    document.body.removeChild(this.gameDOM.dragElement);
+                    this.gameDOM.dragElement = null;
+                    this.gameDOM.fakeDragDiv.draggable = false;
+                    for (let child of this.gameDOM.draggedFromPile.children) {
+                        child.style.opacity = 1;
+                    }
+                    this.gameDOM.draggedFromPile = null;
+                    document.querySelectorAll('.clone-pile').forEach(el => el.remove());
+                });
 
         } else {
             document.body.removeChild(this.gameDOM.dragElement);
@@ -240,11 +242,27 @@ export default class Renderer {
                 child.style.opacity = 1;
             }
             this.gameDOM.draggedFromPile = null;
+            document.querySelectorAll('.clone-pile').forEach(el => el.remove());
         }
-        
+
+    }
+
+    async renderFinishDrop({fromPile,toPile,cardsPile}) {
+        if(this.enableAnimations){
+
+        }else{
+            this._rebuildPileDOM(fromPile);
+            this._rebuildPileDOM(toPile);
+            document.body.removeChild(this.gameDOM.dragElement);
+            this.gameDOM.dragElement = null;
+            this.gameDOM.fakeDragDiv.draggable = false;
+            this.gameDOM.draggedFromPile = null;
+            document.querySelectorAll('.clone-pile').forEach(el => el.remove());
+        }
     }
 
     _renderDragStart({ card, fromPile, cardIdx, evt }) {
+        document.querySelectorAll('.clone-pile').forEach(el => el.remove());
         const pileDOM = this.getDOM(fromPile);
         this.gameDOM.draggedFromPile = pileDOM;
         this.gameDOM.fakeDragDiv.draggable = true;
@@ -278,52 +296,6 @@ export default class Renderer {
         this.gameDOM.dragElement = pileContainer;
     }
 
-
-    // renderDragStartCard({ card, fromPile, cardIdx, evt }) {
-    //     const pileDOM = this.getDOM(fromPile);
-    //     const draggedCard = this._makeCardElement(Card.FromSnapshot(card), 'dragged', 'pile-head', 'pile-end');
-    //     const cardToHide = Array.from(pileDOM.children)[cardIdx];
-    //     cardToHide.style.opacity = 0;
-    //     draggedCard.style.position = 'fixed';
-    //     draggedCard.style.pointerEvents = 'none';
-    //     draggedCard.style.zIndex = '1000';
-    //     draggedCard.style.left = `calc(${evt.clientX}px - 2em)`;
-    //     draggedCard.style.top = `calc(${evt.clientY}px - 2.25em)`;
-    //     document.body.appendChild(draggedCard);
-    //     let rect = draggedCard.getBoundingClientRect();
-    //     evt.dataTransfer.setDragImage(draggedCard, evt.clientX - rect.left, evt.clientY - rect.top);
-    //     setTimeout(() => draggedCard.style.opacity = 0, 1);
-    // }
-
-    // renderDragStartPile({ card, fromPile, cardIdx, evt }) {
-    //     const pileDOM = this.getDOM(fromPile);
-    //     const pileOfCards = Array.from(pileDOM.children).slice(cardIdx);
-    //     const pileContainer = document.createElement('div');
-    //     pileContainer.className = 'clone-pile';
-    //     pileContainer.style.position = 'fixed';
-    //     pileContainer.style.pointerEvents = 'none';
-    //     pileContainer.style.zIndex = 1000;
-    //     pileOfCards.forEach((c,idx) => {
-    //         const clone = c.cloneNode(true);
-    //         clone.classList.add('dragged','on-tableau');
-    //         if(idx===0)
-    //             clone.classList.add('pile-head');
-    //         if(idx === pileOfCards.length-1)
-    //             clone.classList.add('pile-end');
-    //         c.style.opacity = 0;
-    //         pileContainer.appendChild(clone);
-    //     });
-    //     document.body.appendChild(pileContainer);
-    //     let rect = pileContainer.getBoundingClientRect();
-    //     pileContainer.style.left = `$calc(${evt.clientX}px - 2em)`;
-    //     pileContainer.style.top = `$calc(${evt.clientY}px - 2.25em)`;
-    //     evt.dataTransfer.setDragImage(pileContainer,evt.clientX-rect.left,evt.clientY-rect.top);
-    //     setTimeout(()=>{
-    //         Array.from(pileContainer.children).forEach(clone => clone.opacity=0);
-    //     },1);
-    // }
-
-
     renderMoveCard({ card, fromPile, toPile, callback }) {
         const pile = this._getCorrectPileState(fromPile);
         pile.addCard(Card.FromSnapshot(card));
@@ -332,6 +304,19 @@ export default class Renderer {
     }
 
     renderMoveCards({ cardsPile, fromPile, toPile, callback }) {
+        if (this.gameDOM.dragElement) {
+            if (this.getDOM(fromPile) === this.gameDOM.draggedFromPile) {
+                return new Promise(async res => {
+                    await this.renderFinishDrop({cardsPile, fromPile, toPile})
+                        .then(()=>{
+                            if(callback) callback();
+                            res();
+                        });
+                });
+            } else {
+                console.error('Something went wrong with drag&drop operation');
+            }
+        }
         if (this.enableAnimations) {
             return new Promise(async res => {
                 const source = this._rebuildPileDOM(fromPile);
@@ -341,7 +326,7 @@ export default class Renderer {
                 await Promise.all(animations)
                     .then(() => {
                         this._rebuildPileDOM(fromPile);
-                        this._rebuildPileDOM(toPile)
+                        this._rebuildPileDOM(toPile);
                         if (callback) callback();
                         res();
                     });
@@ -527,16 +512,18 @@ export default class Renderer {
         if (pileElement.childElementCount) {
             const firstFaceUpCard = Card.FromSnapshot(overPile.stack.find(card => !!(card & 1)));
             for (let child of pileElement.children) {
-                child.classList.add('feedback', cls, child === pileElement.lastElementChild ? 'pile-end' : null);
+                child.classList.add('feedback', cls);
+                if (child === pileElement.lastElementChild) child.classList.add('pile-end');
                 if (child.classList.contains(firstFaceUpCard.cssClass)) child.classList.add('pile-head');
             }
         } else {
-            console.log('no child');
+            pileElement.classList.add(cls, 'feedback')
         }
         this.gameDOM.lastPaintedFeedack = pileElement;
     }
 
     _dragUpdate({ x, y }) {
+        if (!this.gameDOM.dragElement) return;
         this.gameDOM.dragElement.style.left = `${x - 65}px`;
         this.gameDOM.dragElement.style.top = `${y - 59}px`;
     }
@@ -545,20 +532,22 @@ export default class Renderer {
         if (this.feedbackDragOver) {
             // remove all feedback classes from standing piles
             this.gameDOM.tableauxElements.forEach(tableau => {
+                tableau.classList.remove('feedback', 'valid', 'invalid');
                 if (tableau.childElementCount) {
                     for (let child of tableau.children) {
                         child.classList.remove('feedback', 'valid', 'invalid');
                     }
-                } else {
-                    console.log('no child');
                 }
-            })
-
+            });
+            if (this.gameDOM.lastPaintedFeedack) {
+                this.gameDOM.lastPaintedFeedack.classList.remove('feedback', 'valid', 'invalid');
+            }
         }
     }
 
     _removeDraggedFeedback() {
         if (this.feedbackDragged) {
+            if (!this.gameDOM.dragElement) return;
             // remove all valid/invalid classes from the dragged pile
             for (let child of this.gameDOM.dragElement.children) {
                 child.classList.remove('valid');

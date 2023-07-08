@@ -360,6 +360,14 @@ body {
     scale: 1.1;
 }
 
+.slot.feedback.valid:empty{
+    border-color: var(--drag-border-valid);
+}
+
+.slot.feedback.invalid:empty{
+    border-color: var(--drag-border-invalid);
+}
+
 .card:not(.back).valid{
     scale:1.1;
 }

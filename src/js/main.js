@@ -46,55 +46,21 @@ solitaire.initialize();
 
 //---- CONTROLLER(S) ----//
 
-// let dragEl = document.createElement('div');
-// dragEl.className = 'clone-pile';
-// dragEl.style.transition = 'none';
-// dragEl.style.position = 'fixed';
-// dragEl.style.zIndex = 1000;
-// let lastX = 0, lastY = 0;
-// document.body.appendChild(dragEl);
-// let fakeEl = document.createElement('div');
+let preventDragging = false;
 
-// fakeEl.appendChild(document.createTextNode(`&nbsp;`))
-// //document.body.appendChild(fakeEl);
-// //dragEl = document.querySelector('.clone-pile');
-// // experimental
-// fakeEl = document.getElementById('fake-drag');
-// gameArea.addEventListener('dragstart', (evt) => {
-//     if (selfOrParentCheck(evt, ".foundation")
-//         || selfOrParentCheck(evt, "#waste-slot")
-//         || selfOrParentCheck(evt, ".tableau")
-//     ) {
-//         //evt.preventDefault();
-//         evt.dataTransfer.setDragImage(fakeEl, 99999, 0);
-//         //evt.target.parentElement.removeChild(evt.target);
-//         //dragEl.appendChild(evt.target);
-//         const clone = evt.target.cloneNode(true);
-//         clone.style.transition = "none";
-//         dragEl.appendChild(clone);
-//         evt.target.style.opacity = 0;
-//         dragEl.style.top = evt.clientY;
-//         dragEl.style.left = evt.clientX;
-//         dragEl.style.opacity = 1;
-//         lastX = evt.clientX;
-//         lastY = evt.clientY;
-//         evt.target.addEventListener('drag', dragHandler);
-//     }
-// });
-
-// function dragHandler(evt) {
-//     // console.log('at least we here');
-//     // dragEl.style.left = evt.clientX + 'px';
-//     // dragEl.style.top = evt.clientY + 'px';
-//     //evt.preventDefault();
-//     eventSystem.trigger('drag-update',{evt, dragEl});
-// }
-
-
-
+eventSystem.listen('dealing-finished',()=>{
+    preventDragging = false;
+});
+eventSystem.listen('dealing',()=>{
+    preventDragging = true;
+})
 
 // drag controllers
 gameArea.addEventListener('dragstart', (evt) => {
+    if(preventDragging) {
+        evt.preventDefault();
+        return;
+    }
     if (selfOrParentCheck(evt, ".foundation")
         || selfOrParentCheck(evt, "#waste-slot")
         || selfOrParentCheck(evt, ".tableau")
@@ -106,6 +72,7 @@ gameArea.addEventListener('dragstart', (evt) => {
             eventData: evt
         });
         evt.dataTransfer.effectAllowed = "move";
+        preventDragging=true;
     }
 });
 
@@ -144,13 +111,16 @@ document.addEventListener('drop', (evt)=>{
                 onPile: evt.target.parentNode.id ? evt.target.parentNode.id : evt.target.id,
                 eventData: evt
             });
+            preventDragging = false;
         }else{
             eventSystem.trigger('drop-over-bg');
         }
 });
 
 document.addEventListener('dragend',evt=>{
+    console.log(evt);
     evt.preventDefault();
+    preventDragging = false;
     if(evt.dataTransfer.dropEffect==="none"){
         eventSystem.trigger('drop-over-bg');
     }
