@@ -251,4 +251,8 @@ export class Deck extends Pile {
         }
         this.isShuffled = true;
     }
+
+    get isFull(){
+        return this.stack.length === 52;
+    }
 }

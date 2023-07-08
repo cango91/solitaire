@@ -19,8 +19,7 @@ export default class Solitaire {
         this._getFoundationOfSuit = this._getFoundationOfSuit.bind(this);
         this._getFoundationWithId = this._getFoundationWithId.bind(this);
         this._getTableauWithId = this._getTableauWithId.bind(this);
-        this.onDragEnterPile = this.onDragEnterPile.bind(this);
-        this.onDragLeavePile = this.onDragLeavePile.bind(this);
+
     }
 
     initialize(
@@ -41,19 +40,12 @@ export default class Solitaire {
         //clear & register event listeners
         eventSystem.remove('deck-clicked');
         eventSystem.remove('pile-clicked');
-        eventSystem.remove('pile-dragged');
         eventSystem.remove('drag-start-card');
         eventSystem.remove('drag-over-pile');
-        //eventSystem.remove('drag-enter-pile');
-        //eventSystem.remove('drag-leave-pile');
-
 
         eventSystem.listen('deck-hit', this.onDeckHit);
         eventSystem.listen('drag-start-card', this.onDragStartCard)
         eventSystem.listen('drag-over-pile', this.onDragOverPile);
-        //eventSystem.listen('drag-enter-pile',this.onDragEnterPile);
-        //ventSystem.listen('drag-leave-pile',this.onDragLeavePile);
-
 
         eventSystem.trigger('game-initialized', { settings: this.gameSettings, deck: this.deck.snapshot() });
         this._enableInputs();
@@ -111,19 +103,7 @@ export default class Solitaire {
         this.undoStack = [];
     }
 
-
     //---- GAME EVENT HANDLING ----//
-
-
-    onDragEnterPile(data){
-
-    }
-
-    onDragLeavePile(data){
-        if(!this.acceptInput) return;
-        
-    }
-
 
     onDragOverPile(data) {
         //console.log('hey');
@@ -143,12 +123,12 @@ export default class Solitaire {
 
     async onDeckHit() {
         if (!this.acceptInput) return
-        // if deck is full, it means we deal
         this._disableInputs();
-        if (this.deck.stack.length === 52) {
+        // if deck is full, it means we deal
+        if (this.deck.isFull) {
             await this._deal();
-            // if deck is not empty, it means we hit to waste
-        } else if (this.deck.stack.length > 0) {
+            // if deck is not empty, it means we hit to waste pile
+        } else if (!this.deck.isEmpty) {
             const numToHit = Math.min(this.deck.stack.length, this.gameSettings.difficulty);
             const hitCmd = new HitCommand(this.deck, this.waste, numToHit);
             await this.executeCommand(hitCmd);
@@ -221,7 +201,7 @@ export default class Solitaire {
                         foundationIdx: foundation.idx,
                         evt: eventData
                     });
-                    pile.stack = [ Card.FromSnapshot(card.snapshot())]
+                    pile.stack = [Card.FromSnapshot(card.snapshot())]
                 }
                 break;
             case 't':
@@ -245,94 +225,13 @@ export default class Solitaire {
                 break;
         }
         this.draggedPile = Pile.FromSnapshot(pile.snapshot());
-        //console.log(this.draggedPile);
     }
-
-
-    // _dragStart({ cardIdx, fromPile, eventData }) {
-    //     let card;
-    //     const pile = new Pile();
-    //     switch (fromPile.substring(0, 1).toLowerCase()) {
-    //         case 'w':
-    //             card = this.waste.getCardAt(cardIdx);
-    //             if (!card) break;
-    //             if (card.isDraggable) {
-    //                 eventSystem.trigger('validated-drag-start-card', {
-    //                     action: "drag-start",
-    //                     card: card.snapshot(),
-    //                     fromPile: this.waste.snapshot(),
-    //                     cardIdx,
-    //                     evt: eventData
-    //                 });
-    //                 pile.stack = [Card.FromSnapshot(card.snapshot())];
-    //             }
-    //             break;
-    //         case 'f':
-    //             const foundation = this._getFoundationWithId(fromPile)
-    //             card = foundation.getCardAt(cardIdx);
-    //             if (!card) break;
-    //             if (card.isDraggable) {
-    //                 eventSystem.trigger('validated-drag-start-card', {
-    //                     action: "drag-start",
-    //                     card: card.snapshot(),
-    //                     fromPile: foundation.snapshot(),
-    //                     cardIdx,
-    //                     foundationIdx: foundation.idx,
-    //                     evt: eventData
-    //                 });
-    //                 pile.stack = [ Card.FromSnapshot(card.snapshot())]
-    //             }
-    //             break;
-    //         case 't':
-    //             const tableau = this._getTableauWithId(fromPile);
-    //             card = tableau.getCardAt(cardIdx);
-    //             let eventName;
-    //             if (!card) break;
-    //             if (card.isDraggable) {
-    //                 if (cardIdx + 1 < tableau.stack.length) {
-    //                     eventName = 'validated-drag-start-pile';
-    //                     const pile = new Pile();
-    //                     pile.stack = tableau.stack.slice(cardIdx);
-    //                 } else {
-    //                     eventName = 'validated-drag-start-card';
-    //                     pile.stack = [Card.FromSnapshot(card.snapshot())];
-    //                 }
-    //                 eventSystem.trigger(eventName, {
-    //                     action: "drag-start",
-    //                     card: card.snapshot(),
-    //                     fromPile: tableau.snapshot(),
-    //                     cardIdx,
-    //                     tableauIdx: tableau.idx,
-    //                     evt: eventData
-    //                 });
-    //             }
-    //             break;
-    //         default:
-    //             console.error('An error occured at drag-start-card event handler');
-    //             break;
-    //     }
-    //     this.draggedPile = Pile.FromSnapshot(pile.snapshot());
-    //     console.log(this.draggedPile);
-    // }
 
     _dragOver({ overPile, eventData }) {
         if (!this.draggedPile) return;
         if (overPile.startsWith('t')) {
             const tableau = this._getTableauWithId(overPile);
-            let eventName;
-            if (this.draggedPile.stack.length === 1) {
-                if (tableau.allowDrop(this.draggedPile)) {
-                    eventName = 'valid-drag-over-pile';
-                } else {
-                    eventName = 'invalid-drag-over-pile';
-                };
-            } else {
-                if (tableau.allowDrop(Pile.FromSnapshot(this.draggedPile))) {
-                    eventName = 'valid-drag-over-pile';
-                } else {
-                    eventName = 'invalid-drag-over-pile';
-                }
-            }
+            let eventName = tableau.allowDrop(this.draggedPile) ? 'valid-drag-over-pile' : 'invalid-drag-over-pile';
             eventSystem.trigger(eventName, {
                 action: "drag-over",
                 overPile: tableau.snapshot(),
@@ -359,6 +258,4 @@ export default class Solitaire {
         const foundationIdx = Number(strId.substring(strId.length - 1)) - 1;
         return this.foundations[foundationIdx];
     }
-
-
 }

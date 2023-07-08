@@ -356,8 +356,12 @@ body {
     cursor: no-drop;
 }
 
-.slot .card:not(.back).feedback{
+.slot .card:not(.back).feedback:not(.invalid){
     scale: 1.1;
+}
+
+.card:not(.back).valid{
+    scale:1.1;
 }
 
 /* .card.dragged:not(.card.dragged.pile-head) {

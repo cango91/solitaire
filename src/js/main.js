@@ -105,7 +105,7 @@ gameArea.addEventListener('dragstart', (evt) => {
             fromPile: evt.target.parentNode.id,
             eventData: evt
         });
-        evt.dataTransfer.effectAllowed = "none";
+        evt.dataTransfer.effectAllowed = "move";
     }
 });
 
@@ -131,6 +131,11 @@ gameArea.addEventListener('dragover', (evt) => {
         eventSystem.trigger('drag-over-bg');
     }
 });
+
+gameArea.addEventListener('drop', (evt)=>{
+    evt.preventDefault();
+    
+})
 
 // tableaux[0].addEventListener('dragover', evt => {
 //     evt.preventDefault();
