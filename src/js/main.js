@@ -4,6 +4,7 @@ import Solitaire from './modules/solitaire.js';
 import Renderer from './modules/renderer.js';
 import eventSystem from './modules/eventSystem.js';
 import Menu from './modules/menu.js';
+import { selfOrParentCheck, getChildIdx } from './modules/utils.js';
 
 //---- DOM REFERENCES ----//
 const gameArea = document.querySelector('.game-container');
@@ -13,6 +14,8 @@ const scoreboardElement = document.getElementById('scoreboard');
 const foundations = [];
 const tableaux = [];
 const fakeDragDiv = document.getElementById('fake-drag');
+const overlayElement = document.querySelector('.overlay');
+const popupContainer = document.querySelector('.popup');
 document.querySelectorAll('.tableau').forEach(tab => tableaux.push(tab));
 document.querySelectorAll('.foundation').forEach(foundation => foundations.push(foundation));
 
@@ -21,18 +24,14 @@ tableaux.sort((a, b) => Number(a.id.substring(a.id.length - 1)) > Number(b.id.su
 foundations.sort((a, b) => Number(a.id.substring(a.id.length - 1)) > Number(b.id.substring(b.id.length - 1)));
 
 
-// conveneince function for checking those pesky sub-elements that get clicked on all the time
-function selfOrParentCheck(event, parentSelector) {
-    return event.target.matches(`${parentSelector}, ${parentSelector} *`);
-}
-// convenience function for getting an element's order amongst its siblings
-function getChildIdx(parentElement, childElement) {
-    return Array.from(parentElement.children).indexOf(childElement);
-}
+
 
 
 const renderer = new Renderer();
-const menu = new Menu();
+const menu = new Menu({
+    overlay: overlayElement,
+    popupContainer: popupContainer
+ });
 menu.loadLocalSettings();
 renderer.initializeGameDOM(
     {

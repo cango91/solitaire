@@ -69,19 +69,101 @@
         </div>
         <div id="fake-drag" draggable="true">&nbsp;</div>
         <div class="overlay">
-            <div class="popup">
+            <div class="popup" id="options-popup">
                 <div class="popup-header">
-                    <h1>HEADING</h1>
+                    <h2>OPTIONS</h2>
                 </div>
                 <div class="popup-content">
-                    <p>Content</p>
+                    <div class="options-container">
+                        <div>
+                            <h2>Visuals</h2>
+                        </div>
+                        <div class="visuals">
+                            <div>
+                                <span><b>Deck Color:</b></span><br /><input type="radio" id="reddeck" value="true"
+                                    name="deckcolor"><label for="reddeck"><span
+                                        style="color:red">Red</span></label><input type="radio" id="bluedeck"
+                                    value="false" name="deckcolor"><label for="bluedeck"><span
+                                        style="color: blue;">Blue</span></label>
+                            </div>
+
+                            <div>
+                                <span><b>Visual Feedback On:</b></span>
+                            </div>
+                            <div>
+                                <input type="checkbox" id="feedbackDragged" value="true"><label
+                                    for="feedbackDragged">Dragged
+                                    Cards</label><input type="checkbox" id="feedbackDragOver" value="true"><label
+                                    for="feedbackDragOver">Dragged Over Piles</label>
+                            </div>
+                            <div>
+                                <span><b>Animations:</b></span>
+                            </div>
+                            <div>
+                                <input type="checkbox" id="enableAnimations" value="true"><label
+                                    for="enableAnimations">Enable animations</label>
+                            </div>
+                            <div id="animation-speeds-div">
+                                <label for="animationSpeeds"><b>Animations Speed:</b></label>
+                                <select id="animationSpeeds">
+                                    <option value="turtle">Very Slow</option>
+                                    <option value="slow">Slow</option>
+                                    <option value="normal">Normal</option>
+                                    <option value="fast">Fast</option>
+                                    <option value="lightning">Very Fast</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <hr>
+                        </div>
+                        <div>
+                            <hr>
+                        </div>
+                        <div>
+                            <h2>Game</h2>
+                        </div>
+                        <div class="game">
+                            <div>
+                                <label for="thougtfulSol"><b>Thoughtful Klondike</b><br /><sub>(Unlimited
+                                        Undo's)</sub></label><input type="checkbox" id="thougtfulSol" value="true">
+                            </div>
+                            <div>
+                                <b>Difficulty:</b>
+                            </div>
+                            <div>
+                                <label for="draw-1">Draw-1</label><input type="radio" id="draw-1" value="1"
+                                    name="difficulty">
+                                <label for="draw-3">Draw-3</label><input type="radio" id="draw-3" value="3"
+                                    name="difficulty">
+                            </div>
+                        </div>
+                        <div>
+                            <hr>
+                        </div>
+                        <div>
+                            <hr>
+                        </div>
+                        <div>
+                            <h2>Audio</h2>
+                        </div>
+                        <div class="audio">
+                            <div>
+                                <label for="music_enabled">Enable Background Music</label><input type="checkbox"
+                                    value="true" id="music_anabled"><br /><sub>(If enabled, will automatically download
+                                    and begin playing when completed)</sub>
+                            </div>
+                            <div>
+                                <input type="range" min="0" max="100" value="0" id="music_volume" disabled>
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
                 <div class="popup-footer">
-                    <button>OK</button>
+
                 </div>
             </div>
-        </div>
-    </div>
 </body>
 
 </html>

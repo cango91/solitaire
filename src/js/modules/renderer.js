@@ -39,7 +39,16 @@ export default class Renderer {
         this.removeAllFeedback = this.removeAllFeedback.bind(this);
         this.renderCancelDrag = this.renderCancelDrag.bind(this);
         this._renderLoadGameState = this._renderLoadGameState.bind(this);
+        this._updateSettings = this._updateSettings.bind(this);
+        this._paintItAllRed = this._paintItAllRed.bind(this);
 
+    }
+
+    _updateSettings({renderer}){
+        if(renderer.redDeck !== this.redDeck){
+            this._paintItAllRed(renderer.redDeck);
+        }
+        this.configureSettings(renderer);
     }
 
     configureSettings(
@@ -120,6 +129,8 @@ export default class Renderer {
         eventSystem.remove('drop-over-bg', this.renderCancelDrag);
         eventSystem.remove('invalid-drop-over-pile', this.renderCancelDrag);
         eventSystem.remove('game-data-loaded',this._renderLoadGameState);
+        eventSystem.remove('av-settings-changed',this._updateSettings);
+        eventSystem.remove('game-settings-changed',this._updateSettings);
 
     }
 
@@ -139,6 +150,8 @@ export default class Renderer {
         eventSystem.listen('drop-over-bg', this.renderCancelDrag);
         eventSystem.listen('invalid-drop-over-pile', this.renderCancelDrag);
         eventSystem.listen('game-data-loaded',this._renderLoadGameState);
+        eventSystem.listen('av-settings-changed',this._updateSettings);
+        eventSystem.listen('game-settings-changed',this._updateSettings);
     }
 
     renderInitialState({ deck, callback }) {
@@ -607,6 +620,16 @@ export default class Renderer {
             elem.classList.add('red');
         }else{
             elem.classList.remove('red');
+        }
+    }
+
+    _paintItAllRed(value=true){
+        const backCards = document.querySelectorAll('.back');
+        for(let elem of backCards){
+            if(value)
+                elem.classList.add('red');
+            else
+                elem.classList.remove('red');
         }
     }
 

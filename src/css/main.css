@@ -581,7 +581,7 @@ body {
     transform: translate(-50%, -50%);
     padding: 20px;
     overflow: auto;
-    min-width: 50%;
+    min-width: 70%;
     min-height: 50vh;
     color: whitesmoke;
     border: 2px solid white;
@@ -594,4 +594,44 @@ body {
 .overlay.show {
     display: block;
     transition: opacity 0.3s ease-in-out;
+}
+
+.options-container {
+    display: grid;
+    grid-template-columns: 1fr 3fr;
+    grid-template-rows: auto auto auto;
+}
+
+.visuals {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.visuals * {
+    padding: 5px;
+}
+
+.game {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.game * {
+    padding: 5px;
+}
+
+.audio {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.audio * {
+    padding: 5px;
+}
+
+.hide{
+    display: none;
 }
