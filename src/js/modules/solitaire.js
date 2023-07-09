@@ -23,8 +23,10 @@ export default class Solitaire {
         this._getFoundationWithId = this._getFoundationWithId.bind(this);
         this._getTableauWithId = this._getTableauWithId.bind(this);
         this._canFoundationAccept = this._canFoundationAccept.bind(this);
+        this._getValidFoundationToCollect = this._getValidFoundationToCollect.bind(this);
         this.onCancelDrag = this.onCancelDrag.bind(this);
         this.onDropOverPile = this.onDropOverPile.bind(this);
+        this.onTryCollectCard = this.onTryCollectCard.bind(this);
 
     }
 
@@ -34,12 +36,13 @@ export default class Solitaire {
             timerMode = false,
             scoring = false
         } = {}) {
+
         this.gameSettings.difficulty = difficulty;
         this.gameSettings.timerMode = timerMode;
         this.gameSettings.scoring = scoring;
+
         this.clearHistory();
         this.buildDataObjects();
-
         this.deck.generateCards();
         this.deck.shuffle();
 
@@ -49,15 +52,19 @@ export default class Solitaire {
         eventSystem.remove('drag-over-pile', this.onDragOverPile);
         eventSystem.remove('drop-over-bg', this.onCancelDrag);
         eventSystem.remove('drop-over-pile', this.onDropOverPile);
+        eventSystem.remove('try-collect-card',this.onTryCollectCard);
 
         eventSystem.listen('deck-hit', this.onDeckHit);
         eventSystem.listen('drag-start-card', this.onDragStartCard)
         eventSystem.listen('drag-over-pile', this.onDragOverPile);
         eventSystem.listen('drop-over-bg', this.onCancelDrag);
         eventSystem.listen('drop-over-pile', this.onDropOverPile);
+        eventSystem.listen('try-collect-card',this.onTryCollectCard);
 
-
-        eventSystem.trigger('game-initialized', { settings: this.gameSettings, deck: this.deck.snapshot() });
+        eventSystem.trigger('game-initialized', {
+            settings: this.gameSettings,
+            deck: this.deck.snapshot()
+        });
         this._enableInputs();
     }
 
@@ -121,10 +128,10 @@ export default class Solitaire {
         this._disableInputs();
         this._dropOverPile(data);
         this._enableInputs();
+        if(this.winState) this.onWinGame();
     }
 
     onDragOverPile(data) {
-        //console.log('hey');
         if (!this.acceptInput) return;
         this._disableInputs();
         this._dragOver(data);
@@ -141,6 +148,36 @@ export default class Solitaire {
 
     onCancelDrag() {
         this.draggedPile = null;
+    }
+
+    onWinGame(){
+        this._disableInputs();
+        eventSystem.trigger('game-ended',{
+            action: "system-message",
+            victoryStatus: true
+        });
+    }
+
+    async onTryCollectCard({pileId}){
+        if(!this.acceptInput) return;
+        let pile;
+        if(pileId.startsWith('t')){
+            pile = this._getTableauWithId(pileId);
+        }else if(pileId.startsWith('w')){
+            pile = this.waste;
+        }
+        if(!pile) return;
+        const card = pile.topCard;
+        if(card){
+            const cardPile = new Pile();
+            cardPile.addCard(card);
+            const foundation = this._getValidFoundationToCollect(cardPile);
+            if(foundation){
+                await this.executeCommand(new MoveToFoundationCommand(cardPile,pile,foundation));
+            }else{
+                eventSystem.trigger('reject-collect-card');
+            }
+        }
     }
 
     async onDeckHit() {
@@ -167,7 +204,6 @@ export default class Solitaire {
     }
 
     async _deal() {
-
         for (let i = 0; i < this.tableaux.length; i++) {
             const t = this.tableaux.slice(i);
             for (const tableau of t) {
@@ -273,7 +309,7 @@ export default class Solitaire {
             });
         } else if (overPile.startsWith('f')) {
             const foundation = this._getFoundationWithId(overPile);
-            let eventName = this._canFoundationAccept(foundation,this.draggedPile) ? 'valid-drag-over-pile' : 'invalid-drag-over-pile';
+            let eventName = this._canFoundationAccept(foundation, this.draggedPile) ? 'valid-drag-over-pile' : 'invalid-drag-over-pile';
             eventSystem.trigger(eventName, {
                 action: "drag-over",
                 overPile: foundation.snapshot(),
@@ -295,11 +331,11 @@ export default class Solitaire {
                     evt: eventData
                 });
             }
-        } else if(onPile.startsWith('f')){
+        } else if (onPile.startsWith('f')) {
             const foundation = this._getFoundationWithId(onPile);
-            if(this._canFoundationAccept(foundation,this.draggedPile)){
-                await this.executeCommand(new MoveToFoundationCommand(this.draggedPile,this.draggedFromPile,foundation));
-            }else{
+            if (this._canFoundationAccept(foundation, this.draggedPile)) {
+                await this.executeCommand(new MoveToFoundationCommand(this.draggedPile, this.draggedFromPile, foundation));
+            } else {
                 eventSystem.trigger('invalid-drop-over-pile', {
                     action: "drop",
                     onPile: foundation.snapshot(),
@@ -316,13 +352,13 @@ export default class Solitaire {
 
 
     _getTableauWithId(strId) {
-        if (!strId.startsWith('t')) throw new Error(`Invalid tableau string ID: ${strId}`);
+        if (!strId.toLowerCase().startsWith('t')) throw new Error(`Invalid tableau string ID: ${strId}`);
         const tableauIdx = Number(strId.substring(strId.length - 1)) - 1;
         return this.tableaux[tableauIdx];
     }
 
     _getFoundationWithId(strId) {
-        if (!strId.startsWith('f')) throw new Error(`Invalid foundation string ID: ${strId}`);
+        if (!strId.toLowerCase().startsWith('f')) throw new Error(`Invalid foundation string ID: ${strId}`);
         const foundationIdx = Number(strId.substring(strId.length - 1)) - 1;
         return this.foundations[foundationIdx];
     }
@@ -338,14 +374,22 @@ export default class Solitaire {
                 return foundation.allowDrop(pile);
             }
             return false;
-        }else{
+        } else {
             return foundation.allowDrop(pile);
         }
     }
 
-    _updateFoundationSuits(){
-        this.foundations.forEach((foundation,idx)=>{
+    _getValidFoundationToCollect(pile){
+        return this.foundations.find(foundation=>this._canFoundationAccept(foundation,pile));
+    }
+
+    _updateFoundationSuits() {
+        this.foundations.forEach((foundation, idx) => {
             this.foundationSuits[idx] = foundation.isEmpty ? null : foundation.topCard.suit;
         })
+    }
+
+    get winState(){
+        return this.foundations.every(foundation => foundation.isFull);
     }
 }

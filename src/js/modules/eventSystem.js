@@ -4,13 +4,15 @@
  * Commands should notify the event system by triggering relevant events.
  * DOM manipulators should add listeners for their relevant events, perform DOM manipulation then callback. 
  * Commands should use Promises to ensure DOM manipulation is complete before proceeding (i.e. provide their resolve as callback when triggering events).
- */ 
+ */
 class EventSystem {
-    constructor() {
+    constructor(saveHistory=false) {
         if (EventSystem.instance) {
             return EventSystem.instance;
         }
         this.listeners = {};
+        this.eventDataHistory={};
+        this.saveHistory = saveHistory;
         EventSystem.instance = this;
     }
 
@@ -25,20 +27,24 @@ class EventSystem {
             for (let callback of this.listeners[eventName]) {
                 callback(eventData);
             }
-        else if(eventData.hasOwnProperty('callback')){
-            console.log(`No listeners for ${eventName}, invoking callback`);
-            eventData.callback();
+        if(this.saveHistory){
+            if(!this.eventDataHistory[eventName])
+                this.eventDataHistory[eventName] = [];
+            this.eventDataHistory[eventName].push({
+                eventData,
+                time:Date.now()
+            })
         }
     }
-    remove(eventName,cb){
-        if(this.listeners[eventName])
-        try{
-            this.listeners[eventName] = this.listeners[eventName].splice(this.listeners[eventName].findIndex((c)=>c===cb),1);
-        }catch (e){
-            console.log(e);
-        }
+    remove(eventName, cb) {
+        if (this.listeners[eventName])
+            try {
+                this.listeners[eventName] = this.listeners[eventName].splice(this.listeners[eventName].findIndex((c) => c === cb), 1);
+            } catch (e) {
+                console.log(e);
+            }
     }
-    
+
 }
 
 const eventSystem = new EventSystem();

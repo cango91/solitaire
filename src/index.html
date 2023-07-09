@@ -7,11 +7,10 @@
     <title>Solitaire - Klondike</title>
     <link rel="stylesheet" href="./css/card-library/css/cardstarter.min.css">
     <link rel="stylesheet" href="./css/main.css">
-    <script defer type="module" src="js/main.js"></script>
+    <script type="module" src="js/main.js"></script>
 </head>
 
 <body>
-    
     <div class="game-container">
         <div class="header">
             <div class="icon" id="game-options">
@@ -32,16 +31,16 @@
             <div class="icon" id="undo">
                 <svg xmlns="http://www.w3.org/2000/svg" stroke-width="40" viewBox="0 0 512 512" class="undo-icon">
                     <path d="M240,424V328c116.4,0,159.39,33.76,208,96,0-119.23-39.57-240-208-240V88L64,256Z"
-                        stroke-linejoin="round;" class="fill-inside" />
+                        stroke-linejoin="round" class="fill-inside" />
                 </svg>
             </div>
             <div class="icon" id="redo">
                 <svg xmlns="http://www.w3.org/2000/svg" stroke-width="40" viewBox="0 0 512 512" class="undo-icon">
                     <path d="M240,424V328c116.4,0,159.39,33.76,208,96,0-119.23-39.57-240-208-240V88L64,256Z"
-                        stroke-linejoin="round;" class="fill-inside" />
+                        stroke-linejoin="round" class="fill-inside" />
                 </svg>
             </div>
-            <div class="top-message" id="scoreboard">scoreboard</div>
+            <div class="top-message" id="scoreboard"></div>
         </div>
         <div class="upper-row">
             <div class="slot large" id="deck-slot"></div>
@@ -82,7 +81,6 @@
                 </div>
             </div>
         </div>
-    </div>
     </div>
 </body>
 

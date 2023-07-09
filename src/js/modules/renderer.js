@@ -51,12 +51,14 @@ export default class Renderer {
                 flipDuration: FLIP_DURATION,
                 moveSpeed: MOVE_SPEED,
                 dropSpeed: DROP_SPEED
-            }
+            },
+            redDeck = false
         } = {}) {
         this.enableAnimations = enableAnimations;
         this.animationSpeeds = animationSpeeds;
         this.feedbackDragOver = feedbackDragOver;
         this.feedbackDragged = feedbackDragged;
+        this.redDeck = redDeck;
     }
 
     initializeGameDOM(
@@ -138,7 +140,9 @@ export default class Renderer {
         return new Promise(res => {
             const reconstructedDeck = Deck.FromSnapshot(deck);
             for (const card of reconstructedDeck.stack) {
-                this._addCard(this.gameDOM.deckElement, card, 'deck');
+                const classes = ['deck'];
+                if(this.redDeck) classes.push('red');
+                this._addCard(this.gameDOM.deckElement, card, ...classes);
             }
             if (callback) callback();
             res();
@@ -269,7 +273,7 @@ export default class Renderer {
         } else {
             await new Promise(res => {
                 // we need to wait slightly before removing our elements,
-                // otherwise dragend won't fire
+                // otherwise 'dragend' won't fire
                 setTimeout(() => {
                     this._rebuildPileDOM(fromPile);
                     this._rebuildPileDOM(toPile);
@@ -396,6 +400,7 @@ export default class Renderer {
                     card.classList.add(slice[idx].cssClass);
                 } else {
                     card.classList.add('back');
+                    this._paintItRed(card);
                     card.classList.remove(slice[idx].cssClass);
                 }
                 card.draggable = !!slice[idx].isDraggable
@@ -432,6 +437,7 @@ export default class Renderer {
                     element.classList.add(card.cssClass);
                 } else {
                     element.classList.add('back');
+                    this._paintItRed(element);
                     element.classList.remove(card.cssClass);
                 }
                 element.draggable = !!card.isDraggable;
@@ -504,6 +510,7 @@ export default class Renderer {
             cardEl.classList.add(card.cssClass);
         } else {
             cardEl.classList.add('back');
+            this._paintItRed(cardEl)
         }
 
         if (card.isDraggable) {
@@ -564,11 +571,11 @@ export default class Renderer {
                     }
                 }
             });
-            this.gameDOM.foundationElements.forEach(foundation=>{
-                foundation.classList.remove('feedback','valid','invalid');
-                if(foundation.childElementCount){
-                    for(let child of foundation.children){
-                        child.classList.remove('feedback','valid','invalid');
+            this.gameDOM.foundationElements.forEach(foundation => {
+                foundation.classList.remove('feedback', 'valid', 'invalid');
+                if (foundation.childElementCount) {
+                    for (let child of foundation.children) {
+                        child.classList.remove('feedback', 'valid', 'invalid');
                     }
                 }
             })
@@ -586,6 +593,14 @@ export default class Renderer {
                 child.classList.remove('valid');
                 child.classList.remove('invalid');
             }
+        }
+    }
+
+    _paintItRed(elem){
+        if(this.redDeck){
+            elem.classList.add('red');
+        }else{
+            elem.classList.remove('red');
         }
     }
 }

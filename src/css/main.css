@@ -115,6 +115,9 @@ body {
     }
 } 
 
+.card.back.red{
+    background-image: url('./card-library/images/backs/red.svg');
+}
 
 /* Upper row layout */
 .upper-row {

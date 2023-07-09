@@ -41,27 +41,28 @@ renderer.initializeGameDOM(
     });
 renderer.startRendering();
 renderer.configureSettings({ enableAnimations: false });
+eventSystem.debug = true;
 const solitaire = new Solitaire();
-solitaire.initialize({difficulty:1});
+solitaire.initialize({ difficulty: 1 });
 
 //---- CONTROLLER(S) ----//
 
 let preventDragging = false;
-const reportDragging = ()=>console.log(`Dragging ${preventDragging ? `disable` : `enabled`}`);
+const reportDragging = () => null//console.log(`Dragging ${preventDragging ? `disable` : `enabled`}`);
 
-eventSystem.listen('dealing-finished',()=>{
+eventSystem.listen('dealing-finished', () => {
     preventDragging = false;
     reportDragging();
-    //renderer.configureSettings({ enableAnimations: true });
+    renderer.configureSettings({ enableAnimations: true });
 });
-eventSystem.listen('dealing',()=>{
+eventSystem.listen('dealing', () => {
     preventDragging = true;
     reportDragging();
 })
 
 // drag controllers
 gameArea.addEventListener('dragstart', (evt) => {
-    if(preventDragging) {
+    if (preventDragging) {
         evt.preventDefault();
         return;
     }
@@ -76,13 +77,13 @@ gameArea.addEventListener('dragstart', (evt) => {
             eventData: evt
         });
         evt.dataTransfer.effectAllowed = "move";
-        preventDragging=true;
+        preventDragging = true;
         reportDragging();
     }
 });
 
-gameArea.addEventListener('drag', (evt)=>{
-    eventSystem.trigger('drag-update',{
+gameArea.addEventListener('drag', (evt) => {
+    eventSystem.trigger('drag-update', {
         x: evt.clientX,
         y: evt.clientY
     })
@@ -100,32 +101,32 @@ document.addEventListener('dragover', (evt) => {
 
             eventData: evt
         });
-    }else{
+    } else {
         eventSystem.trigger('drag-over-bg');
     }
 });
 
-document.addEventListener('drop', (evt)=>{
+document.addEventListener('drop', (evt) => {
     evt.preventDefault();
     if (selfOrParentCheck(evt, ".foundation")
         || selfOrParentCheck(evt, ".tableau")
         || selfOrParentCheck(evt, '.on-tableau')
         || selfOrParentCheck(evt, '.on-foundation')) {
-            eventSystem.trigger('drop-over-pile',{
-                action: "controller",
-                onPile: evt.target.parentNode.id ? evt.target.parentNode.id : evt.target.id,
-                eventData: evt
-            });
-        }else{
-            eventSystem.trigger('drop-over-bg');
-        }
+        eventSystem.trigger('drop-over-pile', {
+            action: "controller",
+            onPile: evt.target.parentNode.id ? evt.target.parentNode.id : evt.target.id,
+            eventData: evt
+        });
+    } else {
+        eventSystem.trigger('drop-over-bg');
+    }
 });
 
-document.addEventListener('dragend',evt=>{
+document.addEventListener('dragend', evt => {
     evt.preventDefault();
     preventDragging = false;
     reportDragging();
-    if(evt.dataTransfer.dropEffect==="none"){
+    if (evt.dataTransfer.dropEffect === "none") {
         eventSystem.trigger('drop-over-bg');
     }
 
@@ -135,6 +136,20 @@ document.addEventListener('dragend',evt=>{
 gameArea.addEventListener('click', (evt) => {
     if (selfOrParentCheck(evt, '#deck-slot')) {
         eventSystem.trigger('deck-hit', {});
+    }
+});
+
+gameArea.addEventListener('dblclick', (evt) => {
+    if (preventDragging
+        || !evt.target.parentNode.id)
+        return;
+    if ((selfOrParentCheck(evt, '.card'))
+        && (selfOrParentCheck(evt, '.on-tableau')
+            || selfOrParentCheck(evt, '.on-waste'))) {
+        eventSystem.trigger('try-collect-card', {
+            action: "controller",
+            pileId: evt.target.parentNode.id
+        });
     }
 })
 
@@ -153,3 +168,4 @@ window.renderer = renderer;
 window.references = { deckSlot, wasteSlot, foundations, tableaux };
 window.solitaire = solitaire;
 window.setDragging = (val) => preventDragging = val;
+window.EventSys = eventSystem;
