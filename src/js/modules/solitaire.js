@@ -27,14 +27,17 @@ export default class Solitaire {
         this.onCancelDrag = this.onCancelDrag.bind(this);
         this.onDropOverPile = this.onDropOverPile.bind(this);
         this.onTryCollectCard = this.onTryCollectCard.bind(this);
-
+        this.checkCertainWin = this.checkCertainWin.bind(this);
+        this._serializeState = this._serializeState.bind(this);
+        this._loadState = this._loadState.bind(this);
     }
 
     initialize(
         {
             difficulty = 3,
             timerMode = false,
-            scoring = false
+            scoring = false,
+            thoughtfulSol = false,  // Allowing unlimited undo's is akin to a version of Solitaire called Thoughtful Solitaire
         } = {}) {
 
         this.gameSettings.difficulty = difficulty;
@@ -52,14 +55,14 @@ export default class Solitaire {
         eventSystem.remove('drag-over-pile', this.onDragOverPile);
         eventSystem.remove('drop-over-bg', this.onCancelDrag);
         eventSystem.remove('drop-over-pile', this.onDropOverPile);
-        eventSystem.remove('try-collect-card',this.onTryCollectCard);
+        eventSystem.remove('try-collect-card', this.onTryCollectCard);
 
         eventSystem.listen('deck-hit', this.onDeckHit);
         eventSystem.listen('drag-start-card', this.onDragStartCard)
         eventSystem.listen('drag-over-pile', this.onDragOverPile);
         eventSystem.listen('drop-over-bg', this.onCancelDrag);
         eventSystem.listen('drop-over-pile', this.onDropOverPile);
-        eventSystem.listen('try-collect-card',this.onTryCollectCard);
+        eventSystem.listen('try-collect-card', this.onTryCollectCard);
 
         eventSystem.trigger('game-initialized', {
             settings: this.gameSettings,
@@ -92,7 +95,7 @@ export default class Solitaire {
         await new Promise(res => {
             command.execute();
             res();
-        });
+        }).then(() => this._updateFoundationSuits());
         this.history.push(command);
         this.undoStack = [];
         eventSystem.trigger('history-update', { action: 'executeCommand', history: this.history, undo: this.undoStack });
@@ -101,7 +104,7 @@ export default class Solitaire {
     async undo() {
         if (this.history.length) {
             let command = this.history.pop();
-            await command.undo();
+            await command.undo().then(() => this._updateFoundationSuits());
             this.undoStack.push(command);
             eventSystem.trigger('history-update', { action: 'undo', history: this.history, undo: this.undoStack });
         }
@@ -110,9 +113,25 @@ export default class Solitaire {
     async redo() {
         if (this.undoStack.length) {
             let command = this.undoStack.pop();
-            await command.execute();
+            await command.execute().then(() => this._updateFoundationSuits());
             this.history.push(command);
             eventSystem.trigger('history-update', { action: 'redo', history: this.history, undo: this.undoStack })
+        }
+    }
+
+    async onUndo() {
+        if (this.thoughtfulSol) {
+            this._disableInputs();
+            await this.undo();
+            this._enableInputs();
+        }
+    }
+
+    async onRedo() {
+        if (this.thoughtfulSol) {
+            this._disableInputs();
+            await this.redo();
+            this._enableInputs();
         }
     }
 
@@ -128,7 +147,10 @@ export default class Solitaire {
         this._disableInputs();
         this._dropOverPile(data);
         this._enableInputs();
-        if(this.winState) this.onWinGame();
+        if (this.winState) this.onWinGame();
+        if (this.checkCertainWin()) {
+            eventSystem.trigger('fast-forward-possible');
+        }
     }
 
     onDragOverPile(data) {
@@ -150,31 +172,65 @@ export default class Solitaire {
         this.draggedPile = null;
     }
 
-    onWinGame(){
+    onWinGame() {
         this._disableInputs();
-        eventSystem.trigger('game-ended',{
+        eventSystem.trigger('game-ended', {
             action: "system-message",
             victoryStatus: true
         });
     }
 
-    async onTryCollectCard({pileId}){
-        if(!this.acceptInput) return;
+    async onFastForward() {
+        while (!this.winState) {
+            for (let i = 0; i < this.tableaux.length; i++) {
+                const tableau = this.tableaux[i];
+                if (!tableau.topCard)
+                    continue;
+                let found;
+                do {
+                    const pile = new Pile();
+                    pile.addCard(tableau.topCard);
+                    found = this._getValidFoundationToCollect(pile);
+                    if (found) {
+                        await this.executeCommand(new MoveToFoundationCommand(pile, tableau, found));
+                    }
+                } while (found && tableau.topCard);
+            }
+        }
+    }
+
+    checkCertainWin() {
+        // check all cards on tableaux are face-up
+        // If not, there may be a small card hidden behind a bigger one, possibly preventing win
+        const allfaceUp = this.tableaux.every(tableau => {
+            return tableau.stack.every(card => !!card.faceUp);
+        });
+        return allfaceUp && this.waste.isEmpty && this.deck.isEmpty;
+    }
+
+    async onTryCollectCard({ pileId }) {
+        if (!this.acceptInput) return;
         let pile;
-        if(pileId.startsWith('t')){
+        if (pileId.startsWith('t')) {
             pile = this._getTableauWithId(pileId);
-        }else if(pileId.startsWith('w')){
+        } else if (pileId.startsWith('w')) {
             pile = this.waste;
         }
-        if(!pile) return;
+        if (!pile) return;
         const card = pile.topCard;
-        if(card){
+        if (card) {
             const cardPile = new Pile();
             cardPile.addCard(card);
             const foundation = this._getValidFoundationToCollect(cardPile);
-            if(foundation){
-                await this.executeCommand(new MoveToFoundationCommand(cardPile,pile,foundation));
-            }else{
+            if (foundation) {
+                await this.executeCommand(new MoveToFoundationCommand(cardPile, pile, foundation))
+                    .then(() => {
+                        if (this.winState) this.onWinGame();
+                        if (this.checkCertainWin()) {
+                            eventSystem.trigger('fast-forward-possible');
+                        }
+                    });
+            } else {
                 eventSystem.trigger('reject-collect-card');
             }
         }
@@ -343,7 +399,6 @@ export default class Solitaire {
                 });
             }
         }
-        this._updateFoundationSuits();
     }
 
     _getFoundationOfSuit(suit) {
@@ -379,8 +434,8 @@ export default class Solitaire {
         }
     }
 
-    _getValidFoundationToCollect(pile){
-        return this.foundations.find(foundation=>this._canFoundationAccept(foundation,pile));
+    _getValidFoundationToCollect(pile) {
+        return this.foundations.find(foundation => this._canFoundationAccept(foundation, pile));
     }
 
     _updateFoundationSuits() {
@@ -389,7 +444,45 @@ export default class Solitaire {
         })
     }
 
-    get winState(){
+    get winState() {
         return this.foundations.every(foundation => foundation.isFull);
+    }
+
+    _serializeState() {
+        const tableauxSnaps = this.tableaux.map(tableau => tableau.snapshot());
+        const foundationSnaps = this.foundations.map(foundation => foundation.snapshot());
+        return JSON.stringify({
+            settings: this.gameSettings,
+            piles: {
+                deck: this.deck.snapshot(),
+                waste: this.waste.snapshot(),
+                tableaux: tableauxSnaps,
+                foundations: foundationSnaps,
+                foundationSuits: this.foundationSuits
+            }
+        });
+    }
+
+    async _loadState(state) {
+        this._disableInputs();
+        this.buildDataObjects();
+        const load = JSON.parse(state);
+        this.gameSettings = load.settings;
+        const piles = load.piles;
+        this.deck = Deck.FromSnapshot(piles.deck);
+        this.waste = Deck.FromSnapshot(piles.waste);
+        this.foundations = piles.foundations.map(snap => Foundation.FromSnapshot(snap));
+        this.tableaux = piles.tableaux.map(snap => Tableau.FromSnapshot(snap));
+        new Promise(res => {
+            eventSystem.trigger('game-data-loaded', {
+                ...state,
+                callback: () => {
+                    this._enableInputs();
+                    res();
+                }
+            }).then(()=>{
+                eventSystem.trigger('game-load-finished');
+            })
+        });
     }
 }
