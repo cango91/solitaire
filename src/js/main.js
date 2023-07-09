@@ -3,6 +3,7 @@ import { Waste, Deck, Tableau, Foundation, Pile } from './modules/piles.js';
 import Solitaire from './modules/solitaire.js';
 import Renderer from './modules/renderer.js';
 import eventSystem from './modules/eventSystem.js';
+import Menu from './modules/menu.js';
 
 //---- DOM REFERENCES ----//
 const gameArea = document.querySelector('.game-container');
@@ -31,6 +32,8 @@ function getChildIdx(parentElement, childElement) {
 
 
 const renderer = new Renderer();
+const menu = new Menu();
+menu.loadLocalSettings();
 renderer.initializeGameDOM(
     {
         deckElement: deckSlot,
@@ -40,10 +43,10 @@ renderer.initializeGameDOM(
         fakeDragDiv
     });
 renderer.startRendering();
-renderer.configureSettings({ enableAnimations: false });
+renderer.configureSettings(menu.rendererSettings);
 eventSystem.saveHistory = true;
 const solitaire = new Solitaire();
-solitaire.initialize({ difficulty: 1 });
+solitaire.initialize(menu.gameSettings);
 
 //---- CONTROLLER(S) ----//
 
@@ -136,6 +139,18 @@ document.addEventListener('dragend', evt => {
 gameArea.addEventListener('click', (evt) => {
     if (selfOrParentCheck(evt, '#deck-slot')) {
         eventSystem.trigger('deck-hit', {});
+    }else if(selfOrParentCheck(evt,'.icon')){
+        if(selfOrParentCheck(evt,'#undo')){
+            eventSystem.trigger('undo-clicked');
+        }else if(selfOrParentCheck(evt,'#redo')){
+            eventSystem.trigger('redo-clicked');
+        }else if(selfOrParentCheck(evt,'#game-options')){
+            eventSystem.trigger('settings-clicked');
+        }else if(selfOrParentCheck(evt,"#about")){
+            eventSystem.trigger('about-clicked');
+        }else if(selfOrParentCheck(evt,'#fast-forward')){
+            eventSystem.trigger('fast-forward');
+        }
     }
 });
 
@@ -162,6 +177,8 @@ window.Foundation = Foundation;
 window.Pile = Pile;
 window.Solitaire = Solitaire;
 window.Renderer = Renderer;
+window.Menu = Menu;
+window.menu = menu;
 window.renderer = renderer;
 window.solitaire = solitaire;
 window.setPreventDragging = (val) => preventDragging = val;
@@ -171,6 +188,6 @@ window.getSortedEventHistory = (descending=true) => {
     // sort the inner arrays first
     entries.forEach(entry => entry[1].sort((a, b) => descending ? b.time-a.time : a.time-b.time));
     //then outer
-    entries.sort((a,b)=> descending ? b[1][0].time - a[1][0].time : a[1][0].time-b[1][0].time) //forEach(entry=>entry.sort((a,b)=>a[1].time - b[1].time));
+    entries.sort((a,b)=> descending ? b[1][0].time - a[1][0].time : a[1][0].time-b[1][0].time);
     return entries;
 }
