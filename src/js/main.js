@@ -41,7 +41,7 @@ renderer.initializeGameDOM(
     });
 renderer.startRendering();
 renderer.configureSettings({ enableAnimations: false });
-eventSystem.debug = true;
+eventSystem.saveHistory = true;
 const solitaire = new Solitaire();
 solitaire.initialize({ difficulty: 1 });
 
@@ -169,3 +169,11 @@ window.references = { deckSlot, wasteSlot, foundations, tableaux };
 window.solitaire = solitaire;
 window.setDragging = (val) => preventDragging = val;
 window.EventSys = eventSystem;
+window.getSortedEventHistory = (descending=true) => {
+    const entries = Object.entries(eventSystem.eventDataHistory);
+    // sort the inner arrays first
+    entries.forEach(entry => entry[1].sort((a, b) => descending ? b.time-a.time : a.time-b.time));
+    //then outer
+    entries.sort((a,b)=> descending ? b[1][0].time - a[1][0].time : a[1][0].time-b[1][0].time) //forEach(entry=>entry.sort((a,b)=>a[1].time - b[1].time));
+    return entries;
+}

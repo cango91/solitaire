@@ -43,6 +43,7 @@ export default class Solitaire {
         this.gameSettings.difficulty = difficulty;
         this.gameSettings.timerMode = timerMode;
         this.gameSettings.scoring = scoring;
+        this.gameSettings.thoughtfulSol = thoughtfulSol;
 
         this.clearHistory();
         this.buildDataObjects();
@@ -458,8 +459,8 @@ export default class Solitaire {
                 waste: this.waste.snapshot(),
                 tableaux: tableauxSnaps,
                 foundations: foundationSnaps,
-                foundationSuits: this.foundationSuits
-            }
+            },
+            foundationSuits: this.foundationSuits,
         });
     }
 
@@ -470,19 +471,19 @@ export default class Solitaire {
         this.gameSettings = load.settings;
         const piles = load.piles;
         this.deck = Deck.FromSnapshot(piles.deck);
-        this.waste = Deck.FromSnapshot(piles.waste);
+        this.waste = Waste.FromSnapshot(piles.waste);
         this.foundations = piles.foundations.map(snap => Foundation.FromSnapshot(snap));
         this.tableaux = piles.tableaux.map(snap => Tableau.FromSnapshot(snap));
+        this.foundationSuits = load.foundationSuits;
         new Promise(res => {
             eventSystem.trigger('game-data-loaded', {
-                ...state,
+                ...piles,
                 callback: () => {
                     this._enableInputs();
+                    eventSystem.trigger('game-load-finished');
                     res();
                 }
-            }).then(()=>{
-                eventSystem.trigger('game-load-finished');
-            })
+            });
         });
     }
 }

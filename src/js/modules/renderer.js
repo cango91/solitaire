@@ -16,7 +16,6 @@ export default class Renderer {
         this.gameDOM = {};
         this.gameDOM.tableauxElements = [];
         this.gameDOM.foundationElements = [];
-        this._draggablesState = [];
 
         this.configureSettings = this.configureSettings.bind(this);
         this.removeAllChildren = this.removeAllChildren.bind(this);
@@ -39,6 +38,7 @@ export default class Renderer {
         this._removeDragOverFeedback = this._removeDragOverFeedback.bind(this);
         this.removeAllFeedback = this.removeAllFeedback.bind(this);
         this.renderCancelDrag = this.renderCancelDrag.bind(this);
+        this._renderLoadGameState = this._renderLoadGameState.bind(this);
 
     }
 
@@ -99,6 +99,9 @@ export default class Renderer {
         this.removeAllChildren(this.gameDOM.wasteElement);
         this.gameDOM.tableauxElements.forEach(tabEl => this.removeAllChildren(tabEl));
         this.gameDOM.foundationElements.forEach(foundEl => this.removeAllChildren(foundEl));
+        this.dragElement = null;
+        this.lastPaintedFeedack =null;
+        this.draggedFromPile = null;
     }
 
     clearListeners() {
@@ -116,6 +119,7 @@ export default class Renderer {
         eventSystem.remove('drag-over-bg', this.removeAllFeedback)
         eventSystem.remove('drop-over-bg', this.renderCancelDrag);
         eventSystem.remove('invalid-drop-over-pile', this.renderCancelDrag);
+        eventSystem.remove('game-data-loaded',this._renderLoadGameState);
 
     }
 
@@ -134,6 +138,7 @@ export default class Renderer {
         eventSystem.listen('drag-over-bg', this.removeAllFeedback)
         eventSystem.listen('drop-over-bg', this.renderCancelDrag);
         eventSystem.listen('invalid-drop-over-pile', this.renderCancelDrag);
+        eventSystem.listen('game-data-loaded',this._renderLoadGameState);
     }
 
     renderInitialState({ deck, callback }) {
@@ -288,7 +293,7 @@ export default class Renderer {
         }
     }
 
-    _renderDragStart({ card, fromPile, cardIdx, evt }) {
+    _renderDragStart({  fromPile, cardIdx, evt }) {
         document.querySelectorAll('.clone-pile').forEach(el => el.remove());
         const pileDOM = this.getDOM(fromPile);
         this.gameDOM.draggedFromPile = pileDOM;
@@ -602,5 +607,15 @@ export default class Renderer {
         }else{
             elem.classList.remove('red');
         }
+    }
+
+    _renderLoadGameState({callback, ...piles}){
+        //this.startRendering();
+        this.clearDOM();
+        this.gameDOM.tableauxElements = piles.tableaux.map(tableau=>this._rebuildPileDOM(tableau));
+        this.gameDOM.foundationElements = piles.foundations.map(foundation=>this._rebuildPileDOM(foundation));
+        this.gameDOM.deckElement = this._rebuildPileDOM(piles.deck);
+        this.gameDOM.wasteElement = this._rebuildPileDOM(piles.waste);
+        if(callback) callback();
     }
 }
