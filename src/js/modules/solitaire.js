@@ -30,6 +30,8 @@ export default class Solitaire {
         this.checkCertainWin = this.checkCertainWin.bind(this);
         this._serializeState = this._serializeState.bind(this);
         this._loadState = this._loadState.bind(this);
+        this.onLoadGame = this.onLoadGame.bind(this);
+        this.onRequestSaveData = this.onRequestSaveData.bind(this);
     }
 
     initialize(
@@ -141,6 +143,25 @@ export default class Solitaire {
         this.undoStack = [];
     }
 
+    async onLoadGame(save){
+        this._disableInputs();
+        // take a backup of current state
+        const currentState = this._serializeState();
+        try{
+            await this._loadState(save);
+        }
+        catch(e){
+            console.error(`Couldn't load the save:`,e);
+            console.log('Reverting to previous state');
+            this._loadState(currentState);
+        }
+    }
+
+    onRequestSaveData(){
+        const state = this._serializeState();
+        eventSystem.trigger('game-save-data',state);
+    }
+
     //---- GAME EVENT HANDLING ----//
 
     onDropOverPile(data) {
@@ -183,6 +204,7 @@ export default class Solitaire {
 
     async onFastForward() {
         while (!this.winState) {
+            await new Promise(r=>setTimeout(r,50));
             for (let i = 0; i < this.tableaux.length; i++) {
                 const tableau = this.tableaux[i];
                 if (!tableau.topCard)
@@ -194,6 +216,7 @@ export default class Solitaire {
                     found = this._getValidFoundationToCollect(pile);
                     if (found) {
                         await this.executeCommand(new MoveToFoundationCommand(pile, tableau, found));
+                        await new Promise(r=>setTimeout(r,50));
                     }
                 } while (found && tableau.topCard);
             }

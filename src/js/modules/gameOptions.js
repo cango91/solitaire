@@ -1,9 +1,9 @@
 // Define flipping animation duration in ms, should match CSS
 const FLIP_DURATION = 300;
 // Define card deal speed in px/sec
-const DEAL_SPEED = 10000;
+const MOVE_SPEED = 10000;
 // Define how long it takes to move pile from waste to deck in ms
-const WASTE_DURATION = 100;
+const DROP_SPEED = 100;
 
 // Define default sound settings
 const MUSIC_ENABLED = false;
@@ -17,14 +17,16 @@ const SOUNDS_VOLUME = 0.5;
 class GameOptions {
     constructor({
         difficulty = 3,
-        animationsEnabled = true,
+        enableAnimations = true,
+        feedbackDragged = true,
+        feedbackDragOver = true,
         animationSpeeds = {} = {
-            flip_duration: FLIP_DURATION,
-            deal_speed: DEAL_SPEED,
-            waste_duration: WASTE_DURATION
+            flipDuration: FLIP_DURATION,
+            moveSpeed: MOVE_SPEED,
+            dropSpeed: DROP_SPEED
         },
+        redDeck = false,
         undoEnabled,
-        gameMode = 'default',
         soundSettings = {} = {
             music_enabled: MUSIC_ENABLED,
             music_volume: MUSIC_VOLUME,
@@ -73,7 +75,7 @@ class GameOptions {
             console.error('Failed to save settings.', e);
         }
     }
-    loadLocal(){
+    loadLocal() {
         return GameOptions.LoadLocal();
     }
 }

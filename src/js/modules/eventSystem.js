@@ -39,7 +39,10 @@ class EventSystem {
     remove(eventName, cb) {
         if (this.listeners[eventName])
             try {
-                this.listeners[eventName] = this.listeners[eventName].splice(this.listeners[eventName].findIndex((c) => c === cb), 1);
+                const idx = this.listeners[eventName].findIndex((c) => c === cb);
+                if(idx >=0){
+                    this.listeners[eventName].splice(idx, 1);
+                }
             } catch (e) {
                 console.log(e);
             }

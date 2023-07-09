@@ -143,6 +143,7 @@ export default class Renderer {
 
     renderInitialState({ deck, callback }) {
         return new Promise(res => {
+            this.clearDOM();
             const reconstructedDeck = Deck.FromSnapshot(deck);
             for (const card of reconstructedDeck.stack) {
                 const classes = ['deck'];
@@ -610,7 +611,7 @@ export default class Renderer {
     }
 
     _renderLoadGameState({callback, ...piles}){
-        this.clearDOM();
+        this.startRendering();
         this.gameDOM.tableauxElements = piles.tableaux.map(tableau=>this._rebuildPileDOM(tableau));
         this.gameDOM.foundationElements = piles.foundations.map(foundation=>this._rebuildPileDOM(foundation));
         this.gameDOM.deckElement = this._rebuildPileDOM(piles.deck);
