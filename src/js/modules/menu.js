@@ -1,5 +1,4 @@
 import eventSystem from "./eventSystem.js";
-import { generateOptions } from "./popups/options.js";
 import { selfOrParentCheck } from "./utils.js";
 
 //import { buildOptionsPopup } from "./popups/optionsPopup.js";
