@@ -83,7 +83,7 @@ class Deck {
     +all cards in it are un-draggable
     +doesn't assume about cards leaving it
     XX~~hit(n) => remove n top-down cards (game difficulty) - undoable~~XX
-    // No longer Deck's responsibility. It has member methods to return cards from its top, but removing and 
+    // No longer Deck's responsibility.
     */
 }
 
@@ -130,7 +130,7 @@ class Renderer{
 // Declare and initialize DOM reference const's necessary for rendering of above objects
 // Attach event listeners to relavant DOM variables.
 // Create gameOptions and solitaire objects, call necessary functions.
-// (If type="module" is used for whatever reason - i.e. increasing complexity) expose a window.DebuggingObject to contain any functions and variables needed to interact from console
+// (If type="module" is used for whatever reason - i.e. increasing complexity) expose a window.DebuggingObject to contain functions and variables needed to interact from console
 
 // main.js will act as bootstrapper and controller
 // Solitaire will serve as the main logic/data layer, coordinating other classes with events and commands, whereas Renderer is responsible for all rendering through listening to events
@@ -138,4 +138,4 @@ class Renderer{
 ```
 ## Refactored Architecture
 ![software architecture](./events/architecture.drawio.svg)
-Also see [this readme](./events/readme.md) for a full description of all game-events.
+Also see [this readme](./events/readme.md) for a breakdown of game-events.

@@ -153,8 +153,6 @@ gameArea.addEventListener('dblclick', (evt) => {
     }
 })
 
-
-
 //---- DEBUGGING -----//
 window.Card = Card;
 window.Waste = Waste;
@@ -165,9 +163,8 @@ window.Pile = Pile;
 window.Solitaire = Solitaire;
 window.Renderer = Renderer;
 window.renderer = renderer;
-window.references = { deckSlot, wasteSlot, foundations, tableaux };
 window.solitaire = solitaire;
-window.setDragging = (val) => preventDragging = val;
+window.setPreventDragging = (val) => preventDragging = val;
 window.EventSys = eventSystem;
 window.getSortedEventHistory = (descending=true) => {
     const entries = Object.entries(eventSystem.eventDataHistory);
