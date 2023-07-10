@@ -50,10 +50,8 @@ export default class MoveToTableauCommand extends Command {
             }
             res();
         }).then(async ()=>{
-            console.log('count:',this.count)
             let beginIdx = this.toPile.stack.length - this.count;
             let endIdx = this.toPile.stack.length;
-            console.log(`begin:${beginIdx}, end:${endIdx}`);
             for(let i =beginIdx; i<endIdx;i++){
                 const card = this.toPile.stack.splice(beginIdx,1)[0];
                 this.cardsPile.addCard(Card.FromSnapshot(card.snapshot()));

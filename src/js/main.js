@@ -24,11 +24,10 @@ foundations.sort((a, b) => Number(a.id.substring(a.id.length - 1)) > Number(b.id
 
 
 
+const menu = new Menu();
+menu.loadLocalSettings();
 
 const renderer = new Renderer();
-const menu = new Menu();
-
-menu.loadLocalSettings();
 renderer.initializeGameDOM(
     {
         deckElement: deckSlot,
@@ -39,15 +38,14 @@ renderer.initializeGameDOM(
     });
 renderer.startRendering();
 renderer.configureSettings(menu.rendererSettings);
-eventSystem.saveHistory = true;
+
+
 const solitaire = new Solitaire();
 solitaire.initialize(menu.gameSettings);
 
 //---- CONTROLLER(S) ----//
 
 let preventDragging = false;
-
-
 eventSystem.listen('dealing-finished', () => {
     preventDragging = false;
 
@@ -55,7 +53,7 @@ eventSystem.listen('dealing-finished', () => {
 eventSystem.listen('dealing', () => {
     preventDragging = true;
 
-})
+});
 
 // drag controllers
 gameArea.addEventListener('dragstart', (evt) => {
@@ -163,6 +161,8 @@ gameArea.addEventListener('dblclick', (evt) => {
 })
 
 //---- DEBUGGING -----//
+eventSystem.saveHistory = true;
+
 window.Card = Card;
 window.Waste = Waste;
 window.Deck = Deck;

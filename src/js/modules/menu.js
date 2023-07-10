@@ -55,6 +55,12 @@ export default class Menu {
         this.overlayEl = document.querySelector('.overlay');
         this.popupContainer = document.getElementById('options-popup');
         this.popupFooter = document.querySelector('.popup-footer');
+        this.btnNewGame = document.getElementById('new-game');
+        this.pregameMsg = document.getElementById('pre-game');
+        this.postgameMsg = document.getElementById('post-game');
+        this.victoryMsgInner = `<h2>Congratulations!</h2><h3>You won!</h3>`;
+        this.lossMsgInner = `<h2>Sorry!</h2><h3>You couldn't win. Better luck next time</h3>`;
+        this.difficultyMsg = document.getElementById('difficulty-msg');
 
         document.getElementById('animationSpeeds').onchange = () => this._updateTempOptions();
 
@@ -63,10 +69,20 @@ export default class Menu {
         this.onSettingsClicked = this.onSettingsClicked.bind(this);
         this.optionsController = this.optionsController.bind(this);
         this._buildOptionsButtons = this._buildOptionsButtons.bind(this);
+        this.hideNewGameButton = this.hideNewGameButton.bind(this);
+        this.showNewGameButton = this.showNewGameButton.bind(this);
+        this.showPreGameMessage = this.showPreGameMessage.bind(this);
+        this.hidePreGameMessage = this.hidePreGameMessage.bind(this);
+        this.newGame = this.newGame.bind(this);
+        this.showGameEndedMsg = this.showGameEndedMsg.bind(this);
+        this.onGameLoaded = this.onGameLoaded.bind(this);
 
         eventSystem.listen('game-initialized', this.onGameInitialized);
         eventSystem.listen('settings-clicked', this.onSettingsClicked);
-
+        eventSystem.listen('dealing-finished', this.showNewGameButton);
+        eventSystem.listen('dealing', this.hidePreGameMessage);
+        eventSystem.listen('game-ended',this.showGameEndedMsg);
+        eventSystem.listen('game-load-finished',this.onGameLoaded);
 
         this.overlayEl.addEventListener('click', (evt) => {
             if (!selfOrParentCheck(evt, '#options-popup')) {
@@ -77,25 +93,63 @@ export default class Menu {
                 this.optionsController(evt);
             }
         });
+        this.btnNewGame.addEventListener('click',this.newGame);
+    }
+
+    newGame(){
+        eventSystem.trigger('new-game',{
+            action: "user",
+            ...this.gameSettings
+        });
     }
 
 
     showOverlay() {
-        this.overlayEl.classList.add('show');
-        setTimeout(() => {
-            this.overlayEl.style.opacity = 1;
-        }, 50);
+        this.showElement(this.overlayEl);
     }
 
     hideOverlay() {
-        this.overlayEl.style.opacity = 0;
-        setTimeout(() => {
-            this.overlayEl.classList.remove('show');
-        }, 300);
+        this.hideElement(this.overlayEl);
     }
 
-    showMessage(msg) {
+    showNewGameButton() {
+        this.showElement(this.btnNewGame);
+    }
 
+    hideNewGameButton() {
+        this.hideElement(this.btnNewGame);
+    }
+
+    showPreGameMessage(diff) {
+        this.difficultyMsg.innerText = diff;
+        this.showElement(this.pregameMsg);
+    }
+
+    hidePreGameMessage() {
+        this.hideElement(this.pregameMsg);
+    }
+
+    showGameEndedMsg({victoryStatus}){
+        this.postgameMsg.innerHTML = victoryStatus ? this.victoryMsgInner : this.lossMsgInner;
+        this.showElement(this.postgameMsg);
+    }
+
+    hideGameEndedMsg(){
+        this.hideElement(this.postgameMsg);
+    }
+
+    showElement(elem) {
+        elem.classList.add('show');
+        setTimeout(() => {
+            elem.style.opacity = 1;
+        }, 50);
+    }
+
+    hideElement(elem) {
+        elem.style.opacity = 0;
+        setTimeout(() => {
+            elem.classList.remove('show');
+        }, 300);
     }
 
     onOptionsCancelled() {
@@ -103,12 +157,21 @@ export default class Menu {
         this.tempSettings = {};
     }
 
+    onGameLoaded(){
+        this.hideGameEndedMsg();
+        this.hidePreGameMessage();
+        this.showNewGameButton();
+    }
+
 
     // Game Settings Actions
-
     onGameInitialized({ settings }) {
         // store settings when game begins
         this.gameSettings = settings;
+        this.hideGameEndedMsg();
+        this.hideNewGameButton();
+        const msg = `Draw-${this.gameSettings.difficulty},${this.gameSettings.thoughtfulSol ? 'unlimited undos' : 'no undos'}`
+        this.showPreGameMessage(msg);
     }
 
 

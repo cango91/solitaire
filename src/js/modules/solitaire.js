@@ -32,6 +32,7 @@ export default class Solitaire {
         this._loadState = this._loadState.bind(this);
         this.onLoadGame = this.onLoadGame.bind(this);
         this.onRequestSaveData = this.onRequestSaveData.bind(this);
+        this.restart = this.restart.bind(this);
     }
 
     initialize(
@@ -59,6 +60,8 @@ export default class Solitaire {
         eventSystem.remove('drop-over-bg', this.onCancelDrag);
         eventSystem.remove('drop-over-pile', this.onDropOverPile);
         eventSystem.remove('try-collect-card', this.onTryCollectCard);
+        eventSystem.remove('new-game', this.restart);
+        
 
         eventSystem.listen('deck-hit', this.onDeckHit);
         eventSystem.listen('drag-start-card', this.onDragStartCard)
@@ -66,12 +69,17 @@ export default class Solitaire {
         eventSystem.listen('drop-over-bg', this.onCancelDrag);
         eventSystem.listen('drop-over-pile', this.onDropOverPile);
         eventSystem.listen('try-collect-card', this.onTryCollectCard);
+        eventSystem.listen('new-game', this.restart);
 
         eventSystem.trigger('game-initialized', {
             settings: this.gameSettings,
             deck: this.deck.snapshot()
         });
         this._enableInputs();
+    }
+
+    restart(evt){
+        this.initialize(evt);
     }
 
     buildDataObjects() {
@@ -143,23 +151,23 @@ export default class Solitaire {
         this.undoStack = [];
     }
 
-    async onLoadGame(save){
+    async onLoadGame(save) {
         this._disableInputs();
         // take a backup of current state
         const currentState = this._serializeState();
-        try{
+        try {
             await this._loadState(save);
         }
-        catch(e){
-            console.error(`Couldn't load the save:`,e);
+        catch (e) {
+            console.error(`Couldn't load the save:`, e);
             console.log('Reverting to previous state');
             this._loadState(currentState);
         }
     }
 
-    onRequestSaveData(){
+    onRequestSaveData() {
         const state = this._serializeState();
-        eventSystem.trigger('game-save-data',state);
+        eventSystem.trigger('game-save-data', state);
     }
 
     //---- GAME EVENT HANDLING ----//
@@ -204,7 +212,7 @@ export default class Solitaire {
 
     async onFastForward() {
         while (!this.winState) {
-            await new Promise(r=>setTimeout(r,50));
+            await new Promise(r => setTimeout(r, 50));
             for (let i = 0; i < this.tableaux.length; i++) {
                 const tableau = this.tableaux[i];
                 if (!tableau.topCard)
@@ -216,11 +224,12 @@ export default class Solitaire {
                     found = this._getValidFoundationToCollect(pile);
                     if (found) {
                         await this.executeCommand(new MoveToFoundationCommand(pile, tableau, found));
-                        await new Promise(r=>setTimeout(r,50));
+                        await new Promise(r => setTimeout(r, 50));
                     }
                 } while (found && tableau.topCard);
             }
         }
+        this.onWinGame();
     }
 
     checkCertainWin() {
@@ -241,7 +250,7 @@ export default class Solitaire {
             pile = this.waste;
         }
         if (!pile) return;
-        
+
         const card = pile.topCard;
         if (card) {
             this._disableInputs();
@@ -258,7 +267,7 @@ export default class Solitaire {
                         }
                     });
             } else {
-                eventSystem.trigger('reject-collect-card',{});
+                eventSystem.trigger('reject-collect-card', {});
             }
             this._enableInputs();
         }
