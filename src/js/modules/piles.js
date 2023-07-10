@@ -37,6 +37,9 @@ export class Pile extends DataObject {
 
     removeTopCard() {
         if (this.topCard) {
+            if(this.topCard.isDraggable){
+                return this.stack.pop();
+            }
             this.topCard.isDraggable = false;
             return this.stack.pop();
         }
@@ -44,11 +47,11 @@ export class Pile extends DataObject {
     }
 
     addCard(card) {
-        card.isDraggable = false;
+        card.isDraggable = true;
         this.stack.push(card);
     }
 
-    allowDrop(pileOrCard) {
+    allowDrop() {
         return false;
     }
 

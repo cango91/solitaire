@@ -241,8 +241,10 @@ export default class Solitaire {
             pile = this.waste;
         }
         if (!pile) return;
+        
         const card = pile.topCard;
         if (card) {
+            this._disableInputs();
             const cardPile = new Pile();
             cardPile.addCard(card);
             const foundation = this._getValidFoundationToCollect(cardPile);
@@ -252,11 +254,13 @@ export default class Solitaire {
                         if (this.winState) this.onWinGame();
                         if (this.checkCertainWin()) {
                             eventSystem.trigger('fast-forward-possible');
+                            this._enableInputs();
                         }
                     });
             } else {
-                eventSystem.trigger('reject-collect-card');
+                eventSystem.trigger('reject-collect-card',{});
             }
+            this._enableInputs();
         }
     }
 

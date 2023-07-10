@@ -10,12 +10,10 @@ import { selfOrParentCheck, getChildIdx } from './modules/utils.js';
 const gameArea = document.querySelector('.game-container');
 const deckSlot = document.getElementById('deck-slot');
 const wasteSlot = document.getElementById('waste-slot');
-const scoreboardElement = document.getElementById('scoreboard');
 const foundations = [];
 const tableaux = [];
+
 const fakeDragDiv = document.getElementById('fake-drag');
-const overlayElement = document.querySelector('.overlay');
-const popupContainer = document.querySelector('.popup');
 document.querySelectorAll('.tableau').forEach(tab => tableaux.push(tab));
 document.querySelectorAll('.foundation').forEach(foundation => foundations.push(foundation));
 
@@ -28,10 +26,8 @@ foundations.sort((a, b) => Number(a.id.substring(a.id.length - 1)) > Number(b.id
 
 
 const renderer = new Renderer();
-const menu = new Menu({
-    overlay: overlayElement,
-    popupContainer: popupContainer
- });
+const menu = new Menu();
+
 menu.loadLocalSettings();
 renderer.initializeGameDOM(
     {
@@ -50,16 +46,15 @@ solitaire.initialize(menu.gameSettings);
 //---- CONTROLLER(S) ----//
 
 let preventDragging = false;
-const reportDragging = () => null//console.log(`Dragging ${preventDragging ? `disable` : `enabled`}`);
+
 
 eventSystem.listen('dealing-finished', () => {
     preventDragging = false;
-    reportDragging();
-    renderer.configureSettings({ enableAnimations: true });
+
 });
 eventSystem.listen('dealing', () => {
     preventDragging = true;
-    reportDragging();
+
 })
 
 // drag controllers
@@ -80,7 +75,7 @@ gameArea.addEventListener('dragstart', (evt) => {
         });
         evt.dataTransfer.effectAllowed = "move";
         preventDragging = true;
-        reportDragging();
+
     }
 });
 
@@ -119,6 +114,7 @@ document.addEventListener('drop', (evt) => {
             onPile: evt.target.parentNode.id ? evt.target.parentNode.id : evt.target.id,
             eventData: evt
         });
+        
     } else {
         eventSystem.trigger('drop-over-bg');
     }
@@ -127,7 +123,6 @@ document.addEventListener('drop', (evt) => {
 document.addEventListener('dragend', evt => {
     evt.preventDefault();
     preventDragging = false;
-    reportDragging();
     if (evt.dataTransfer.dropEffect === "none") {
         eventSystem.trigger('drop-over-bg');
     }

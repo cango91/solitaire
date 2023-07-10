@@ -214,6 +214,7 @@ export default class Renderer {
         cardElement.className = '';
         if (classDecorations.length || extraClasses.length)
             cardElement.classList.add(...classDecorations, ...extraClasses);
+        this._paintItRed(cardElement);
         return cardElement;
     }
 
@@ -270,7 +271,7 @@ export default class Renderer {
 
     }
 
-    async renderFinishDrop({ fromPile, toPile, cardsPile }) {
+    async renderFinishDrop({ fromPile, toPile }) {
         if (this.enableAnimations) {
             const toElement = this.getDOM(toPile);
             await new Promise(res => {
@@ -386,7 +387,7 @@ export default class Renderer {
     }
 
     renderFlipPile({ pile, callback }) {
-        let numCards = Pile.FromSnapshot(pile).stack.length;
+        let numCards = pile.stack.length;
         return this.renderFlipNCardsAtPile({ pile, numCards, callback });
     }
 
@@ -426,14 +427,6 @@ export default class Renderer {
             });
             if (callback) callback();
         }
-    }
-
-    _makeMovePile(elems) {
-        const movePile = document.createElement('div');
-        movePile.classList.add('slot', 'tableau');
-        movePile.style.border = 'none';
-        elems.forEach(elem => movePile.appendChild(elem));
-        return movePile;
     }
 
     _animateFlipCard(element, card, speed) {
