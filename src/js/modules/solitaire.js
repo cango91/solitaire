@@ -132,7 +132,7 @@ export default class Solitaire {
         if (this.history.length) {
             let command = this.history.pop();
             if(command instanceof CollectWastePileCommand)
-                this.passes--;
+                this.currentPasses--;
             await command.undo().then(() => this._updateFoundationSuits());
             this.undoStack.push(command);
             eventSystem.trigger('history-update', { action: 'undo', history: this.history, undo: this.undoStack });
