@@ -1,4 +1,4 @@
-# Solitaire (Klondike)
+# Solitaire (Klondike) MVP
 
 Welcome to the world of Solitaire!
 
@@ -14,7 +14,7 @@ Every face-up card in a partial pile, or a complete pile, can be moved, as a uni
 
 The aim of the game is to build up four stacks of cards starting with Ace and ending with King, all of the same suit, on one of the four foundations, at which time the player would have won.
 
-There are many variations of dealing from the stock to *waste* pile
+There are many variations of dealing from the stock to *waste* pile. In this implementation, we have 1 or 3-draw modes, with no limit on passes through the stock (Solitaire has a very low win-rate anyways). You can also simulate a version of Klondike, known as *Thoughtful Solitaire* (through unlimited undos), which is when all the card locations are known to the player (this actually has a win probability of ~80%) - which is still different than playing with all cards face-up (since a smaller face-down card could still be blocking the game).
 
 **Did you know:**
 - Any game one can play by themself is called Solitaire, but in North America and many other places, Solitaire will almost always refer to Klondike in the absence of qualifiers around its name
@@ -23,8 +23,9 @@ There are many variations of dealing from the stock to *waste* pile
 
 # Screenshots
 
-<img src="url to your image on imgur">
-<img src="url to your image on imgur">
+![early development](./docs/screenshots/screenshot1.png)
+![options screen](./docs/screenshots/screenshot2_options.png)
+![near-win state](./docs/screenshots/screenshot3.png)
 
 # Technologies Used
 
@@ -42,6 +43,9 @@ There are many variations of dealing from the stock to *waste* pile
 
 # Next Steps
 
++ Save/Load Game
++ UI Improvements
++ Performance Improvements
 + Making mobile-friendly
 + Game Options: Sound effects
 + Game Options: Timer-mode

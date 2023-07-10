@@ -33,6 +33,11 @@ export default class Solitaire {
         this.onLoadGame = this.onLoadGame.bind(this);
         this.onRequestSaveData = this.onRequestSaveData.bind(this);
         this.restart = this.restart.bind(this);
+        this.onFastForward = this.onFastForward.bind(this);
+        this.onUndo = this.onUndo.bind(this);
+        this.onRedo = this.onRedo.bind(this);
+        this.undo = this.undo.bind(this);
+        this.redo = this.redo.bind(this);
     }
 
     initialize(
@@ -41,12 +46,14 @@ export default class Solitaire {
             timerMode = false,
             scoring = false,
             thoughtfulSol = false,  // Allowing unlimited undo's is akin to a version of Solitaire called Thoughtful Solitaire
+            passes = 0
         } = {}) {
 
         this.gameSettings.difficulty = difficulty;
         this.gameSettings.timerMode = timerMode;
         this.gameSettings.scoring = scoring;
         this.gameSettings.thoughtfulSol = thoughtfulSol;
+        this.gameSettings.passes = passes;
 
         this.clearHistory();
         this.buildDataObjects();
@@ -61,6 +68,10 @@ export default class Solitaire {
         eventSystem.remove('drop-over-pile', this.onDropOverPile);
         eventSystem.remove('try-collect-card', this.onTryCollectCard);
         eventSystem.remove('new-game', this.restart);
+        eventSystem.remove('game-settings-changed',this.restart);
+        eventSystem.remove('fast-forward', this.onFastForward);
+        eventSystem.remove('undo-clicked',this.onUndo);
+        eventSystem.remove('redo-clicked',this.onRedo);
         
 
         eventSystem.listen('deck-hit', this.onDeckHit);
@@ -70,6 +81,10 @@ export default class Solitaire {
         eventSystem.listen('drop-over-pile', this.onDropOverPile);
         eventSystem.listen('try-collect-card', this.onTryCollectCard);
         eventSystem.listen('new-game', this.restart);
+        eventSystem.listen('game-settings-changed',this.restart);
+        eventSystem.listen('fast-forward', this.onFastForward);
+        eventSystem.listen('undo-clicked',this.onUndo);
+        eventSystem.listen('redo-clicked',this.onRedo);
 
         eventSystem.trigger('game-initialized', {
             settings: this.gameSettings,
@@ -100,6 +115,7 @@ export default class Solitaire {
         };
         this.draggedPile = null;
         this.draggedFromPile = null;
+        this.currentPasses = 0;
     }
 
     async executeCommand(command) {
@@ -115,6 +131,8 @@ export default class Solitaire {
     async undo() {
         if (this.history.length) {
             let command = this.history.pop();
+            if(command instanceof CollectWastePileCommand)
+                this.passes--;
             await command.undo().then(() => this._updateFoundationSuits());
             this.undoStack.push(command);
             eventSystem.trigger('history-update', { action: 'undo', history: this.history, undo: this.undoStack });
@@ -131,7 +149,7 @@ export default class Solitaire {
     }
 
     async onUndo() {
-        if (this.thoughtfulSol) {
+        if (this.gameSettings.thoughtfulSol) {
             this._disableInputs();
             await this.undo();
             this._enableInputs();
@@ -139,7 +157,7 @@ export default class Solitaire {
     }
 
     async onRedo() {
-        if (this.thoughtfulSol) {
+        if (this.gameSettings.thoughtfulSol) {
             this._disableInputs();
             await this.redo();
             this._enableInputs();
@@ -209,8 +227,17 @@ export default class Solitaire {
             victoryStatus: true
         });
     }
+    
+    onLoseGame(){
+        this._disableInputs();
+        eventSystem.trigger('game-ended',{
+            action: "system-message",
+            victoryStatus: false,
+        });
+    }
 
     async onFastForward() {
+        if(!this.checkCertainWin()) return;
         while (!this.winState) {
             await new Promise(r => setTimeout(r, 50));
             for (let i = 0; i < this.tableaux.length; i++) {
@@ -291,6 +318,10 @@ export default class Solitaire {
             await this.executeCommand(hitCmd).then(() => this._enableInputs());
         } else if (!this.deck.stack.length && this.waste.stack.length) {
             this._disableInputs();
+            this.currentPasses++;
+            if(this.lossState){
+                return this.onLoseGame();
+            }
             const collectCmd = new CollectWastePileCommand(this.waste, this.deck);
             await this.executeCommand(collectCmd).then(() => this._enableInputs());
         }
@@ -485,6 +516,13 @@ export default class Solitaire {
         return this.foundations.every(foundation => foundation.isFull);
     }
 
+    get lossState(){
+        if(this.gameSettings.passes>0){
+            return this.currentPasses >= this.gameSettings.passes;
+        }
+        return false;
+    }
+
     _serializeState() {
         const tableauxSnaps = this.tableaux.map(tableau => tableau.snapshot());
         const foundationSnaps = this.foundations.map(foundation => foundation.snapshot());
@@ -497,6 +535,7 @@ export default class Solitaire {
                 foundations: foundationSnaps,
             },
             foundationSuits: this.foundationSuits,
+            currentPasses: this.currentPasses,
         });
     }
 
@@ -511,6 +550,13 @@ export default class Solitaire {
         this.foundations = piles.foundations.map(snap => Foundation.FromSnapshot(snap));
         this.tableaux = piles.tableaux.map(snap => Tableau.FromSnapshot(snap));
         this.foundationSuits = load.foundationSuits;
+        this.currentPasses = load.currentPasses;
+
+        // if the save was from before we had passes, gracefully load and assume unlimited passess
+        if(!this.gameSettings.hasOwnProperty('passes')){
+            this.gameSettings.passes= 0;
+            this.currentPasses = 0;
+        }
         new Promise(res => {
             eventSystem.trigger('game-data-loaded', {
                 ...piles,

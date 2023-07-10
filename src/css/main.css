@@ -110,12 +110,12 @@ body {
         margin-left: 0;
     }
 
-    body{
+    body {
         background-color: var(--icon-base);
     }
-} 
+}
 
-.card.back.red{
+.card.back.red {
     background-image: url('./card-library/images/backs/red.svg');
 }
 
@@ -163,7 +163,8 @@ body {
 
 .slot.foundation:hover .card:last-child {
     box-shadow: -.25rem .0 0.35rem var(--icon-stroke);
-    scale: 1.05;;
+    scale: 1.05;
+    ;
 }
 
 
@@ -172,7 +173,7 @@ body {
     font-size: 26px;
 }
 
-#waste-slot{
+#waste-slot {
     background-color: var(--waste-bg);
 }
 
@@ -392,14 +393,12 @@ body {
     cursor: no-drop;
 }
 
-.slot .card:not(.back)
-
-.slot .card:not(.back).feedback:not(.invalid) {
+.slot .card:not(.back) .slot .card:not(.back).feedback:not(.invalid) {
     scale: 1.1;
 }
 
-.slot.foundation .card.feedback:last-of-type{
-    border-width: var(--drag-border-size);    
+.slot.foundation .card.feedback:last-of-type {
+    border-width: var(--drag-border-size);
 }
 
 .slot.feedback.valid:empty {
@@ -488,6 +487,20 @@ body {
     fill: var(--undo-icon-active-fill);
 }
 
+.ff-icon {
+    stroke: var(--icon-highlight);
+    fill: var(--icon-stroke);
+}
+
+.ff-icon:hover {
+    stroke: var(--icon-stroke);
+    fill: var(--icon-base);
+}
+
+.ff-icon:active{
+    fill: var(--icon-highlight)
+}
+
 .options-icon {
     stroke-width: 1;
     stroke: var(--icon-stroke);
@@ -534,6 +547,17 @@ body {
 
 #redo.show {
 
+    display: inline;
+    transition: opacity 0.1s ease-in-out;
+}
+
+#fast-forward{
+    opacity: 0;
+    display: none;
+    transition: opacity 0.1s ease-in-out;
+}
+
+#fast-forward.show{
     display: inline;
     transition: opacity 0.1s ease-in-out;
 }
@@ -591,6 +615,10 @@ body {
     justify-content: space-between;
 }
 
+.popup a{
+    color: var(--icon-base);
+}
+
 .overlay.show {
     display: block;
     transition: opacity 0.3s ease-in-out;
@@ -632,6 +660,10 @@ body {
     padding: 5px;
 }
 
-.hide{
+.hide {
     display: none;
+}
+
+#about-popup p{
+    font-size: small;
 }

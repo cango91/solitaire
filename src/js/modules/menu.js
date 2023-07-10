@@ -38,6 +38,7 @@ export default class Menu {
             timerMode: false,
             scoring: false,
             thoughtfulSol: true,
+            passes: 0
         };
         this.rendererSettings = {
             enableAnimations: true,
@@ -54,15 +55,31 @@ export default class Menu {
 
         this.overlayEl = document.querySelector('.overlay');
         this.popupContainer = document.getElementById('options-popup');
-        this.popupFooter = document.querySelector('.popup-footer');
+        this.popupFooter = document.querySelector('#options-popup .popup-footer');
+        this.aboutFooter = document.querySelector('#about-popup .popup-footer');
         this.btnNewGame = document.getElementById('new-game');
         this.pregameMsg = document.getElementById('pre-game');
         this.postgameMsg = document.getElementById('post-game');
+        this.difficultyMsg = document.getElementById('difficulty-msg');
+        this.btnUndo = document.getElementById('undo');
+        this.btnRedo = document.getElementById('redo');
+        this.btnFastForward = document.getElementById('fast-forward');
+        this.audio = null;
+
         this.victoryMsgInner = `<h2>Congratulations!</h2><h3>You won!</h3>`;
         this.lossMsgInner = `<h2>Sorry!</h2><h3>You couldn't win. Better luck next time</h3>`;
-        this.difficultyMsg = document.getElementById('difficulty-msg');
+        this.musicSrc = './assets/chill-abstract-intention-12099.mp3';
 
-        document.getElementById('animationSpeeds').onchange = () => this._updateTempOptions();
+
+        document.getElementById('animationSpeeds').onchange = () => {
+            this._updateTempOptions();
+            this.optionsController();
+        };
+
+        document.getElementById('passes').onchange = () => {
+            this._updateTempOptions();
+            this.optionsController();
+        }
 
         this.onGameInitialized = this.onGameInitialized.bind(this);
         this.loadLocalSettings = this.loadLocalSettings.bind(this);
@@ -76,28 +93,41 @@ export default class Menu {
         this.newGame = this.newGame.bind(this);
         this.showGameEndedMsg = this.showGameEndedMsg.bind(this);
         this.onGameLoaded = this.onGameLoaded.bind(this);
+        this.onFastForwardAvailable = this.onFastForwardAvailable.bind(this);
+        this.onHistoryUpdate = this.onHistoryUpdate.bind(this);
+        this.onAboutClicked = this.onAboutClicked.bind(this);
 
         eventSystem.listen('game-initialized', this.onGameInitialized);
         eventSystem.listen('settings-clicked', this.onSettingsClicked);
         eventSystem.listen('dealing-finished', this.showNewGameButton);
         eventSystem.listen('dealing', this.hidePreGameMessage);
-        eventSystem.listen('game-ended',this.showGameEndedMsg);
-        eventSystem.listen('game-load-finished',this.onGameLoaded);
+        eventSystem.listen('game-ended', this.showGameEndedMsg);
+        eventSystem.listen('game-load-finished', this.onGameLoaded);
+        eventSystem.listen('fast-forward-possible', this.onFastForwardAvailable);
+        eventSystem.listen('history-update', this.onHistoryUpdate);
+        eventSystem.listen('about-clicked', this.onAboutClicked)
 
         this.overlayEl.addEventListener('click', (evt) => {
             if (!selfOrParentCheck(evt, '#options-popup')) {
+                this.hideAbout();
                 this.hideOverlay();
                 this.onOptionsCancelled();
             } else {
+                this.hideAbout();
                 this._updateTempOptions();
                 this.optionsController(evt);
             }
         });
-        this.btnNewGame.addEventListener('click',this.newGame);
+        this.btnNewGame.addEventListener('click', this.newGame);
+
+        this.handleAudioRendering();
+
     }
 
-    newGame(){
-        eventSystem.trigger('new-game',{
+    newGame() {
+        this.hideAllThoughtfulButtons();
+        this.hideFFButton();
+        eventSystem.trigger('new-game', {
             action: "user",
             ...this.gameSettings
         });
@@ -129,12 +159,14 @@ export default class Menu {
         this.hideElement(this.pregameMsg);
     }
 
-    showGameEndedMsg({victoryStatus}){
+    showGameEndedMsg({ victoryStatus }) {
         this.postgameMsg.innerHTML = victoryStatus ? this.victoryMsgInner : this.lossMsgInner;
+        this.hideAllThoughtfulButtons();
+        this.hideFFButton();
         this.showElement(this.postgameMsg);
     }
 
-    hideGameEndedMsg(){
+    hideGameEndedMsg() {
         this.hideElement(this.postgameMsg);
     }
 
@@ -157,7 +189,9 @@ export default class Menu {
         this.tempSettings = {};
     }
 
-    onGameLoaded(){
+    onGameLoaded() {
+        this.hideAllThoughtfulButtons();
+        this.hideFFButton();
         this.hideGameEndedMsg();
         this.hidePreGameMessage();
         this.showNewGameButton();
@@ -170,7 +204,7 @@ export default class Menu {
         this.gameSettings = settings;
         this.hideGameEndedMsg();
         this.hideNewGameButton();
-        const msg = `Draw-${this.gameSettings.difficulty},${this.gameSettings.thoughtfulSol ? 'unlimited undos' : 'no undos'}`
+        const msg = `Draw-${this.gameSettings.difficulty},${this.gameSettings.thoughtfulSol ? 'unlimited undos' : 'no undos'}, ${this.gameSettings.passes > 0 ? this.gameSettings.passes : 'unlimited'}-passes through stock`
         this.showPreGameMessage(msg);
     }
 
@@ -186,11 +220,13 @@ export default class Menu {
 
     onSettingsClicked() {
         this.tempSettings = JSON.parse(JSON.stringify(this.currentSettings));
+        this.hideAbout();
         this._buildOptionsButtons();
         this.popupFooter.firstChild.remove();
         this.popupFooter.appendChild(this.btnContainer);
-
         this._handleVisualsSection();
+        this._handleGameSection();
+        this._handleAudioSection();
         this.showOverlay();
     }
 
@@ -200,25 +236,58 @@ export default class Menu {
         this.audioSettings = JSON.parse(JSON.stringify(this.tempSettings.audio));
         this.tempSettings = {};
         this.saveSettingsLocal();
-
     }
 
     onGameSettingsChanged() {
         this.applySettings();
+        this.hideAllThoughtfulButtons();
+        this.hideFFButton();
+        this.handleAudioRendering();
         eventSystem.trigger('game-settings-changed', {
             action: 'settings-changed',
+            ...this.gameSettings,
             ...this.currentSettings
         });
     }
 
     onRendererSettingsChanged() {
         this.applySettings();
+        this.handleAudioRendering();
         eventSystem.trigger('av-settings-changed', {
             action: 'settings-changed',
             renderer: this.currentSettings.renderer,
             audio: this.currentSettings.audio,
         });
+    }
+    handleAudioRendering() {
+        if (this.currentSettings.audio.music_enabled) {
+            if (!this.audio) {
+                // If it doesn't exist, create a new audio element.
+                this.audio = document.createElement("audio");
+                // Set the audio properties.
+                this.audio.loop = true;
+                this.audio.autoplay = true;
+                this.audio.volume = this.currentSettings.audio.music_volume;
+                this.audio.controls = false;
+                document.body.appendChild(this.audio);
+                this.audio.src = this.musicSrc;
+                this.audio.load();
+                this.audio.oncanplaythrough = () => {
+                    this.audio.play();
+                }
 
+            } else {
+                this.audio.volume = this.currentSettings.audio.music_volume;
+                if (this.audio.paused)
+                    this.audio.play();
+            }
+        } else {
+            if (this.audio) {
+                this.audio.pause();
+                document.body.removeChild(this.audio);
+                this.audio = null;
+            }
+        }
     }
 
     _buildOptionsButtons() {
@@ -269,14 +338,13 @@ export default class Menu {
             this.okBtn.classList.remove('hide');
         }
 
+        if (!evt) return;
         if (selfOrParentCheck(evt, '.visuals')) {
-
             this._handleVisualsSection();
         } else if (selfOrParentCheck(evt, '.game')) {
-            // game settings area
             this._handleGameSection();
         } else if (selfOrParentCheck(evt, '.audio')) {
-            console.log('aiudio')
+            this._handleAudioSection();
         } else if (selfOrParentCheck(evt, '.popup-footer')) {
             if (evt.target === this.cancelBtn || evt.target === this.okBtn) {
                 this.onOptionsCancelled();
@@ -315,21 +383,47 @@ export default class Menu {
             for (let child of selectSpeed) {
                 child.selected = !!(child.value.toLowerCase() === this.getPresetName(this.tempSettings.renderer.animationSpeeds));
             }
-
         } else {
             animationSpeedsDiv.classList.add('hide');
         }
     }
 
     _handleGameSection() {
+        const thoughtfulChkbox = document.getElementById('thoughtfulSol');
+        thoughtfulChkbox.checked = !!this.tempSettings.game.thoughtfulSol;
+
+        const draw1 = document.getElementById('draw-1');
+        const draw3 = document.getElementById('draw-3');
+
+        draw1.checked = this.tempSettings.game.difficulty != 3;
+        draw3.checked = !!!draw1.checked;
+
+        const passSelect = document.getElementById('passes');
+        for (let child of passSelect) {
+            child.selected = child.value == this.tempSettings.game.passes;
+        }
+
+    }
+
+    _handleAudioSection() {
+        const musicChkbox = document.getElementById('music_enabled');
+        musicChkbox.checked = !!this.tempSettings.audio.music_enabled;
+
+
+        const musicSlider = document.getElementById('music_volume');
+        if (!!this.tempSettings.audio.music_enabled) {
+            musicSlider.removeAttribute('disabled');
+            musicSlider.value = this.tempSettings.audio.music_volume * 100;
+        } else {
+            musicSlider.setAttribute('disabled', true);
+        }
 
     }
 
     _updateTempOptions() {
         if (!this.tempSettings) return;
-        const deckColorRed = document.getElementById('reddeck');
-        const deckColorBlue = document.getElementById('bluedeck');
 
+        const deckColorRed = document.getElementById('reddeck');
         this.tempSettings.renderer.redDeck = deckColorRed.checked;
 
         const draggedCardsChkbox = document.getElementById('feedbackDragged');
@@ -339,22 +433,105 @@ export default class Menu {
         this.tempSettings.renderer.feedbackDragOver = !!draggedOverChkbox.checked;
 
         const animationsChkbox = document.getElementById('enableAnimations');
-
         this.tempSettings.renderer.enableAnimations = !!animationsChkbox.checked;
-
         if (this.tempSettings.renderer.enableAnimations) {
             const selectSpeed = document.getElementById('animationSpeeds');
             this.tempSettings.renderer.animationSpeeds = ANIMATION_SPEED_PRESETS[selectSpeed.value.toLowerCase()];
+        }
+        const thoughtfulChkbox = document.getElementById('thoughtfulSol');
+        this.tempSettings.game.thoughtfulSol = !!thoughtfulChkbox.checked;
+
+        const draw1 = document.getElementById('draw-1');
+        this.tempSettings.game.difficulty = (!!draw1.checked) ? 1 : 3;
+
+        const passSelect = document.getElementById('passes');
+        this.tempSettings.game.passes = Number(passSelect.value);
+
+        const musicChkbox = document.getElementById('music_enabled');
+
+
+        this.tempSettings.audio.music_enabled = !!musicChkbox.checked;
+        if (this.tempSettings.audio.music_enabled) {
+            const musicSlider = document.getElementById('music_volume');
+            this.tempSettings.audio.music_volume = musicSlider.value / 100;
+            if (this.audio) {
+                this.audio.volume = this.tempSettings.audio.music_volume;
+            } else {
+                this.handleAudioRendering();
+            }
         }
     }
 
     // About Actions
 
     onAboutClicked() {
-
+        if (Object.keys(this.tempSettings).length) return;
+        const popup = document.getElementById('about-popup');
+        popup.classList.remove('hide')
+        const options = document.getElementById('options-popup');
+        options.classList.add('hide');
+        this.showOverlay();
     }
 
+    hideAbout() {
+        const popup = document.getElementById('about-popup');
+        popup.classList.add('hide');
+        const options = document.getElementById('options-popup');
+        setTimeout(() => options.classList.remove('hide'), 300);
+    }
     // Fast-forward/undo/redo
+    onHistoryUpdate({ history, undo }) {
+        if (this.currentSettings.game.thoughtfulSol) {
+            if (history.length) {
+                this.showUndoButton();
+            } else {
+                this.hideUndoButton();
+            }
+            if (undo.length) {
+                this.showRedoButton();
+            } else {
+                this.hideRedoButton();
+            }
+        } else {
+            this.hideAllThoughtfulButtons();
+        }
+    }
+
+
+    onFastForwardAvailable() {
+        this.showFFButton();
+    }
+
+    showUndoButton() {
+        this.showElement(this.btnUndo);
+    }
+
+    hideUndoButton() {
+        this.hideElement(this.btnUndo);
+    }
+
+    showRedoButton() {
+        this.showElement(this.btnRedo);
+    }
+
+    hideRedoButton() {
+        this.hideElement(this.btnRedo);
+    }
+
+    hideAllThoughtfulButtons() {
+        this.hideRedoButton();
+        this.hideUndoButton();
+    }
+
+    showFFButton() {
+        this.showElement(this.btnFastForward);
+    }
+
+    hideFFButton() {
+        this.hideElement(this.btnFastForward);
+    }
+
+    // getters and savers
 
 
 
