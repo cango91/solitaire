@@ -19,7 +19,6 @@ export default class Solitaire {
         this.onDragOverPile = this.onDragOverPile.bind(this);
         this._dragStart = this._dragStart.bind(this);
         this._dragOver = this._dragOver.bind(this);
-        this._getFoundationOfSuit = this._getFoundationOfSuit.bind(this);
         this._getFoundationWithId = this._getFoundationWithId.bind(this);
         this._getTableauWithId = this._getTableauWithId.bind(this);
         this._canFoundationAccept = this._canFoundationAccept.bind(this);
@@ -468,11 +467,6 @@ export default class Solitaire {
             }
         }
     }
-
-    _getFoundationOfSuit(suit) {
-        return this.foundationSuits[suit.value];
-    }
-
 
     _getTableauWithId(strId) {
         if (!strId.toLowerCase().startsWith('t')) throw new Error(`Invalid tableau string ID: ${strId}`);

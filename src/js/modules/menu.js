@@ -68,7 +68,8 @@ export default class Menu {
 
         this.victoryMsgInner = `<h2>Congratulations!</h2><h3>You won!</h3>`;
         this.lossMsgInner = `<h2>Sorry!</h2><h3>You couldn't win. Better luck next time</h3>`;
-        this.musicSrc = './assets/chill-abstract-intention-12099.mp3';
+        // this.musicSrc = './assets/chill-abstract-intention-12099.mp3';
+        this.musicSrc = './assets/Guitar Uplifting Background_no vocal.mp3' // => copyrighted asset, use the above one
 
 
         document.getElementById('animationSpeeds').onchange = () => {
