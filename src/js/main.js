@@ -5,6 +5,7 @@ import Renderer from './modules/renderer.js';
 import eventSystem from './modules/eventSystem.js';
 import Menu from './modules/menu.js';
 import { selfOrParentCheck, getChildIdx } from './modules/utils.js';
+import Scoring from './modules/scoring.js';
 
 //---- DOM REFERENCES ----//
 const gameArea = document.querySelector('.game-container');
@@ -38,6 +39,8 @@ renderer.initializeGameDOM(
     });
 renderer.startRendering();
 renderer.configureSettings(menu.rendererSettings);
+
+const scoring = new Scoring();
 
 
 const solitaire = new Solitaire();
@@ -172,6 +175,8 @@ window.Pile = Pile;
 window.Solitaire = Solitaire;
 window.Renderer = Renderer;
 window.Menu = Menu;
+window.Scoring = Scoring;
+window.scoring = scoring;
 window.menu = menu;
 window.renderer = renderer;
 window.solitaire = solitaire;

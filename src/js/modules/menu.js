@@ -53,6 +53,7 @@ export default class Menu {
         };
         this.tempSettings = {};
 
+        // DOM references
         this.overlayEl = document.querySelector('.overlay');
         this.popupContainer = document.getElementById('options-popup');
         this.popupFooter = document.querySelector('#options-popup .popup-footer');
@@ -64,14 +65,18 @@ export default class Menu {
         this.btnUndo = document.getElementById('undo');
         this.btnRedo = document.getElementById('redo');
         this.btnFastForward = document.getElementById('fast-forward');
+        this.scoreBoardElement = document.getElementById('scoreboard');
+        this.scoreElement = document.getElementById('score');
         this.audio = null;
 
+        // ~Constants
         this.victoryMsgInner = `<h2>Congratulations!</h2><h3>You won!</h3>`;
         this.lossMsgInner = `<h2>Sorry!</h2><h3>You couldn't win. Better luck next time</h3>`;
         // this.musicSrc = './assets/chill-abstract-intention-12099.mp3';
         this.musicSrc = './assets/Guitar Uplifting Background_no vocal.mp3' // => copyrighted asset, use the above one
 
 
+        // Change listeners for <select> elements so they'll correctly update our model
         document.getElementById('animationSpeeds').onchange = () => {
             this._updateTempOptions();
             this.optionsController();
@@ -82,6 +87,7 @@ export default class Menu {
             this.optionsController();
         }
 
+        // bindings
         this.onGameInitialized = this.onGameInitialized.bind(this);
         this.loadLocalSettings = this.loadLocalSettings.bind(this);
         this.onSettingsClicked = this.onSettingsClicked.bind(this);
@@ -97,7 +103,9 @@ export default class Menu {
         this.onFastForwardAvailable = this.onFastForwardAvailable.bind(this);
         this.onHistoryUpdate = this.onHistoryUpdate.bind(this);
         this.onAboutClicked = this.onAboutClicked.bind(this);
+        this.onUpdateScore = this.onUpdateScore.bind(this);
 
+        // custom event listeners
         eventSystem.listen('game-initialized', this.onGameInitialized);
         eventSystem.listen('settings-clicked', this.onSettingsClicked);
         eventSystem.listen('dealing-finished', this.showNewGameButton);
@@ -106,8 +114,10 @@ export default class Menu {
         eventSystem.listen('game-load-finished', this.onGameLoaded);
         eventSystem.listen('fast-forward-possible', this.onFastForwardAvailable);
         eventSystem.listen('history-update', this.onHistoryUpdate);
-        eventSystem.listen('about-clicked', this.onAboutClicked)
+        eventSystem.listen('about-clicked', this.onAboutClicked);
+        eventSystem.listen('score-updated',this.onUpdateScore);
 
+        // delegating click events for pop-ups
         this.overlayEl.addEventListener('click', (evt) => {
             if (!selfOrParentCheck(evt, '#options-popup')) {
                 this.hideAbout();
@@ -121,10 +131,11 @@ export default class Menu {
         });
         this.btnNewGame.addEventListener('click', this.newGame);
 
+        // try to autoplay (or not) based on current user settings
         this.handleAudioRendering();
-
     }
 
+    // New game and popup-related functions
     newGame() {
         this.hideAllThoughtfulButtons();
         this.hideFFButton();
@@ -152,7 +163,7 @@ export default class Menu {
     }
 
     showPreGameMessage(diff) {
-        this.difficultyMsg.innerText = diff;
+        this.difficultyMsg.innerHTML = diff;
         this.showElement(this.pregameMsg);
     }
 
@@ -160,8 +171,16 @@ export default class Menu {
         this.hideElement(this.pregameMsg);
     }
 
-    showGameEndedMsg({ victoryStatus }) {
-        this.postgameMsg.innerHTML = victoryStatus ? this.victoryMsgInner : this.lossMsgInner;
+    makeVictoryMessage(score){
+        let victoryMsg = this.victoryMsgInner;
+        if(this.currentSettings.game.scoring){
+            victoryMsg += `\n<h3 class="winner-score">Your score: ${score}</h3>`;
+        }
+        return victoryMsg;
+    }
+
+    showGameEndedMsg({ victoryStatus, score }) {
+        this.postgameMsg.innerHTML = !!victoryStatus ? this.makeVictoryMessage(score) : this.lossMsgInner;
         this.hideAllThoughtfulButtons();
         this.hideFFButton();
         this.showElement(this.postgameMsg);
@@ -192,10 +211,42 @@ export default class Menu {
 
     onGameLoaded() {
         this.hideAllThoughtfulButtons();
+        this.hideScoreboard();
         this.hideFFButton();
         this.hideGameEndedMsg();
         this.hidePreGameMessage();
         this.showNewGameButton();
+    }
+
+    // Scoreboard Actions
+    showScoreBoard() {
+        this.showElement(this.scoreBoardElement);
+    }
+
+    hideScoreboard() {
+        this.hideElement(this.scoreBoardElement);
+    }
+
+    onUpdateScore(data) {
+        if (!this.currentSettings.game.scoring) return;
+        if (this.currentSettings.renderer.enableAnimations) {
+            this._animateScoreUpdate(data.currentScore);
+        } else {
+            this.scoreElement.innerText = data.currentScore;
+        }
+    }
+
+    _animateScoreUpdate(newScore) {
+        const previousScore = Number(this.scoreElement.innerText);
+        this.scoreElement.innerText = newScore;
+        if (previousScore > Number(newScore)){
+            this.scoreElement.classList.add('pulse-it', 'score-decreased');
+        }else if(previousScore < Number(newScore)){
+            this.scoreElement.classList.add('pulse-it','score-increased');
+        }else{
+            return;
+        }
+        setTimeout(()=> this.scoreElement.classList.remove('pulse-it', 'score-increased','score-decreased') , 500);
     }
 
 
@@ -205,13 +256,10 @@ export default class Menu {
         this.gameSettings = settings;
         this.hideGameEndedMsg();
         this.hideNewGameButton();
-        const msg = `Draw-${this.gameSettings.difficulty},${this.gameSettings.thoughtfulSol ? 'unlimited undos' : 'no undos'}, ${this.gameSettings.passes > 0 ? this.gameSettings.passes : 'unlimited'}-passes through stock`
+        this.scoreElement.innerText = "0";
+        this.gameSettings.scoring ? this.showScoreBoard() : this.hideScoreboard();
+        const msg = `Draw-${this.gameSettings.difficulty},${this.gameSettings.thoughtfulSol ? 'unlimited undos' : 'no undos'}, ${this.gameSettings.passes > 0 ? this.gameSettings.passes : 'unlimited'}-passes through stock${this.gameSettings.scoring ? '<div class="scored-game">\nSCORED GAME</div>' : ''}`;
         this.showPreGameMessage(msg);
-    }
-
-
-    get currentPresetName() {
-        return Object.keys(ANIMATION_SPEED_PRESETS).find(key => ANIMATION_SPEED_PRESETS[key].flipDuration === this.currentSettings.renderer.animationSpeeds.flipDuration);
     }
 
     getPresetName(animationSpeeds) {
@@ -291,6 +339,7 @@ export default class Menu {
         }
     }
 
+    // build the various buttons for options popup
     _buildOptionsButtons() {
         this.btnContainer = document.createElement('div');
         this.btnContainer.style.display = 'flex';
@@ -318,6 +367,7 @@ export default class Menu {
         this.btnContainer.appendChild(this.cancelBtn);
     }
 
+    // options pop-up controller
     optionsController(evt) {
         if (!this.tempSettings) return;
 
@@ -360,6 +410,7 @@ export default class Menu {
         }
     }
 
+    // options popup views
     _handleVisualsSection() {
         const deckColorRed = document.getElementById('reddeck');
         const deckColorBlue = document.getElementById('bluedeck');
@@ -393,6 +444,15 @@ export default class Menu {
         const thoughtfulChkbox = document.getElementById('thoughtfulSol');
         thoughtfulChkbox.checked = !!this.tempSettings.game.thoughtfulSol;
 
+        const scoringSpan = document.getElementById('scoring-span');
+        if (!!!this.tempSettings.game.thoughtfulSol) {
+            scoringSpan.classList.remove('hide');
+            const scoringChkbx = document.getElementById('scoring');
+            scoringChkbx.checked = !!this.tempSettings.game.scoring;
+        } else {
+            scoringSpan.classList.add('hide');
+        }
+
         const draw1 = document.getElementById('draw-1');
         const draw3 = document.getElementById('draw-3');
 
@@ -421,6 +481,7 @@ export default class Menu {
 
     }
 
+    // options popup model
     _updateTempOptions() {
         if (!this.tempSettings) return;
 
@@ -441,6 +502,13 @@ export default class Menu {
         }
         const thoughtfulChkbox = document.getElementById('thoughtfulSol');
         this.tempSettings.game.thoughtfulSol = !!thoughtfulChkbox.checked;
+
+        const scoringChkbx = document.getElementById('scoring');
+        if (!!!this.tempSettings.game.thoughtfulSol) {
+            this.tempSettings.game.scoring = !!scoringChkbx.checked;
+        } else {
+            this.tempSettings.game.scoring = false;
+        }
 
         const draw1 = document.getElementById('draw-1');
         this.tempSettings.game.difficulty = (!!draw1.checked) ? 1 : 3;
@@ -533,9 +601,6 @@ export default class Menu {
     }
 
     // getters and savers
-
-
-
     get currentSettings() {
         const renderer = this.rendererSettings;
         const game = this.gameSettings;
@@ -548,7 +613,6 @@ export default class Menu {
     }
 
     // Retrieving localStorage - throws if unsuccessful
-
     get _localSettings() {
         try {
             const settings = JSON.parse(localStorage.getItem('allSettings'));
@@ -567,7 +631,6 @@ export default class Menu {
     }
 
     // use this to get a valid setting, will return defaults or current if fails to load localStorage
-
     loadLocalSettings() {
         try {
             const settings = this._localSettings;
@@ -581,7 +644,6 @@ export default class Menu {
     }
 
     // saving settings to localStorage
-
     saveSettingsLocal() {
         try {
             localStorage.setItem('allSettings', JSON.stringify(this.currentSettings));

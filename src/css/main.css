@@ -30,6 +30,15 @@
 
     --foundation-bg: #b1b1a0;
     --waste-bg: #9a88a0;
+
+    --bright-red-color: #FF4500;
+    --electric-blue-color: #7DF9FF;
+
+    --score-increase-color: #7DF9FF;
+    --score-decrease-color: #FF4500;
+
+    --scored-game-color: #8c1d88;
+
 }
 
 html {
@@ -497,7 +506,7 @@ body {
     fill: var(--icon-base);
 }
 
-.ff-icon:active{
+.ff-icon:active {
     fill: var(--icon-highlight)
 }
 
@@ -551,13 +560,13 @@ body {
     transition: opacity 0.1s ease-in-out;
 }
 
-#fast-forward{
+#fast-forward {
     opacity: 0;
     display: none;
     transition: opacity 0.1s ease-in-out;
 }
 
-#fast-forward.show{
+#fast-forward.show {
     display: inline;
     transition: opacity 0.1s ease-in-out;
 }
@@ -615,7 +624,7 @@ body {
     justify-content: space-between;
 }
 
-.popup a{
+.popup a {
     color: var(--icon-base);
 }
 
@@ -664,6 +673,74 @@ body {
     display: none;
 }
 
-#about-popup p{
+#about-popup p {
     font-size: small;
+}
+
+.top-message {
+    color: var(--icon-base);
+}
+
+#score.pulse-it {
+    animation: pulse-size 0.5s ease-in-out alternate infinite;
+}
+
+.winner-score{
+    animation: pulse-size-sm 2s ease-in-out alternate infinite;
+    color: var(--scored-game-color);
+}
+
+.top-message span {
+    font-size: medium;
+    vertical-align: middle;
+    transition: color 0.1s ease-in-out;
+}
+
+.top-message span.score-increased {
+    color: var(--score-increase-color);
+}
+
+.top-message span.score-decreased {
+    color: var(--score-decrease-color);
+}
+
+@keyframes pulse-size-sm {
+    0% {
+        font-size: 1em;
+    }
+
+    50% {
+        font-size: 1.3em;
+    }
+
+    100% {
+        font-size: 1em;
+    }
+}
+
+@keyframes pulse-size {
+    0% {
+        font-size: 1em;
+    }
+
+    50% {
+        font-size: 1.5em;
+    }
+
+    100% {
+        font-size: 1em;
+    }
+}
+
+.red-deck {
+    color: var(--bright-red-color);
+}
+
+.blue-deck {
+    color: var(--electric-blue-color);
+}
+
+.scored-game {
+    color: var(--scored-game-color);
+    font-size: 1.5em;
 }

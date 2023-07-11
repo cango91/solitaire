@@ -24,6 +24,7 @@ export default class MoveToFoundationCommand extends Command{
                 this.flipTableauOnUndoFlag = true;
                 this.fromPile.revealTopCard();
                 await new Promise(res => eventSystem.trigger('flip-top-card-at-pile', {
+                    action: 'user-action',
                     pile: this.fromPile.snapshot(),
                     callback: res
                 }));
@@ -36,6 +37,7 @@ export default class MoveToFoundationCommand extends Command{
             if(this.flipTableauOnUndoFlag){
                 this.fromPile.hideTopCard();
                 await new Promise(resolve=>eventSystem.trigger('flip-top-card-at-pile', {
+                    action: 'undo-user-action',
                     pile: this.fromPile.snapshot(),
                     callback: resolve
                 }));

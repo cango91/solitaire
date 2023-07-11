@@ -37,6 +37,7 @@ export default class Solitaire {
         this.onRedo = this.onRedo.bind(this);
         this.undo = this.undo.bind(this);
         this.redo = this.redo.bind(this);
+        this.onScoreUpdated = this.onScoreUpdated.bind(this);
     }
 
     initialize(
@@ -71,7 +72,8 @@ export default class Solitaire {
         eventSystem.remove('fast-forward', this.onFastForward);
         eventSystem.remove('undo-clicked',this.onUndo);
         eventSystem.remove('redo-clicked',this.onRedo);
-        
+        eventSystem.remove('score-updated',this.onScoreUpdated);
+
 
         eventSystem.listen('deck-hit', this.onDeckHit);
         eventSystem.listen('drag-start-card', this.onDragStartCard)
@@ -84,6 +86,7 @@ export default class Solitaire {
         eventSystem.listen('fast-forward', this.onFastForward);
         eventSystem.listen('undo-clicked',this.onUndo);
         eventSystem.listen('redo-clicked',this.onRedo);
+        eventSystem.listen('score-updated',this.onScoreUpdated);
 
         eventSystem.trigger('game-initialized', {
             settings: this.gameSettings,
@@ -115,6 +118,7 @@ export default class Solitaire {
         this.draggedPile = null;
         this.draggedFromPile = null;
         this.currentPasses = 0;
+        this.currentScore = 0;
     }
 
     async executeCommand(command) {
@@ -223,7 +227,8 @@ export default class Solitaire {
         this._disableInputs();
         eventSystem.trigger('game-ended', {
             action: "system-message",
-            victoryStatus: true
+            victoryStatus: true,
+            score: this.currentScore,
         });
     }
     
@@ -232,6 +237,7 @@ export default class Solitaire {
         eventSystem.trigger('game-ended',{
             action: "system-message",
             victoryStatus: false,
+            score: 0,
         });
     }
 
@@ -250,7 +256,7 @@ export default class Solitaire {
                     found = this._getValidFoundationToCollect(pile);
                     if (found) {
                         await this.executeCommand(new MoveToFoundationCommand(pile, tableau, found));
-                        await new Promise(r => setTimeout(r, 50));
+                        await new Promise(r => setTimeout(r, 100));
                     }
                 } while (found && tableau.topCard);
             }
@@ -530,6 +536,7 @@ export default class Solitaire {
             },
             foundationSuits: this.foundationSuits,
             currentPasses: this.currentPasses,
+            currentScore: this.currentScore
         });
     }
 
@@ -548,9 +555,14 @@ export default class Solitaire {
 
         // if the save was from before we had passes, gracefully load and assume unlimited passess
         if(!this.gameSettings.hasOwnProperty('passes')){
-            this.gameSettings.passes= 0;
+            this.gameSettings.passes = 0;
             this.currentPasses = 0;
         }
+        // similarly scoring is a post-mvp addition
+        if(load.currentScore){
+            this.currentScore = load.currentScore;
+        }
+
         new Promise(res => {
             eventSystem.trigger('game-data-loaded', {
                 ...piles,
@@ -561,5 +573,12 @@ export default class Solitaire {
                 }
             });
         });
+    }
+
+    onScoreUpdated({currentScore}){
+        if(this.gameSettings.scoring){
+            this.currentScore = currentScore;
+        }
+        
     }
 }
