@@ -26,6 +26,7 @@ There are many variations of dealing from the stock to *waste* pile. In this imp
 ![early development](./docs/screenshots/screenshot1.png)
 ![options screen](./docs/screenshots/screenshot2_options.png)
 ![near-win state](./docs/screenshots/screenshot3.png)
+![post-MVP score screen](./docs/screenshots/postMVPscoringScreen.png)
 
 # Technologies Used
 
