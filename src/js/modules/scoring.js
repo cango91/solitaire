@@ -58,10 +58,9 @@ export default class Scoring {
     onGameInitialized(data) {
         // We'll not allow for scoring if undo's are turned on
         this.keepScore = data.settings.thoughtfulSol ? false : data.settings.scoring;
+        this.removeListeners();
         if (this.keepScore) {
             this.attachListeners();
-        } else {
-            this.removeListeners();
         }
         this.currentPassThru = 0;
         this.difficultyKey = data.settings.difficulty;
