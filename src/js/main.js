@@ -96,7 +96,6 @@ document.addEventListener('dragover', (evt) => {
         eventSystem.trigger('drag-over-pile', {
             action: "controller",
             overPile: evt.target.parentNode.id ? evt.target.parentNode.id : evt.target.id, // if foundation or tableau is empty, i.e. has no children
-
             eventData: evt
         });
     } else {
@@ -114,11 +113,11 @@ document.addEventListener('drop', (evt) => {
             action: "controller",
             onPile: evt.target.parentNode.id ? evt.target.parentNode.id : evt.target.id,
             eventData: evt
-        });
-        
+        });        
     } else {
         eventSystem.trigger('drop-over-bg');
     }
+    preventDragging = false;
 });
 
 document.addEventListener('dragend', evt => {
