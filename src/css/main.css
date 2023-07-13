@@ -91,8 +91,9 @@ button:active {
 
 body {
     height: 100vh;
-    max-width: 1200px;
     margin: 0;
+    display: flex;
+    justify-content: center;
 }
 
 .blur {
@@ -113,7 +114,6 @@ body {
 
 @media screen and (min-width:1200px) {
     .game-container {
-        width: 100%;
         margin: 0 auto;
         padding: 0 55px;
     }
@@ -123,6 +123,7 @@ body {
     }
 
     body {
+        max-width: 1200px;
         background-color: var(--icon-base);
     }
 }
@@ -136,6 +137,7 @@ body {
     display: flex;
     justify-content: space-between;
     padding: 10px;
+    margin: 0 50px;
 }
 
 /* Lower row layout */

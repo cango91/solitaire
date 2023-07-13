@@ -11,6 +11,16 @@
 </head>
 
 <body>
+    <div class="message-box" id="pre-game">
+        <h2>Click the stock to begin game</h2>
+        <sub>(Or click the icons on top-right to change settings or to display information)</sub>
+        <h3>Current Difficulty:</h3>
+        <h4><small><span id="difficulty-msg"></span></small> </h4>
+    </div>
+    <div class="message-box" id="post-game">
+        <h2>Congratulations!</h2>
+        <h3>You won!</h3>
+    </div>
     <div class="game-container">
         <div class="header">
             <div class="icon" id="game-options">
@@ -68,16 +78,7 @@
         <div class="footer">
             <button id="new-game"><b>New Game</b></button>
         </div>
-        <div class="message-box" id="pre-game">
-            <h2>Click the stock to begin game</h2>
-            <sub>(Or click the icons on top-right to change settings or to display information)</sub>
-            <h3>Current Difficulty:</h3>
-            <h4><small><span id="difficulty-msg"></span></small> </h4>
-        </div>
-        <div class="message-box" id="post-game">
-            <h2>Congratulations!</h2>
-            <h3>You won!</h3>
-        </div>
+
         <div id="fake-drag" draggable="true">&nbsp;</div>
         <div class="overlay">
             <div class="popup" id="about-popup">
