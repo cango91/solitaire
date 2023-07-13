@@ -43,6 +43,9 @@
 
 html {
     font-family: 'Courier New', Courier, monospace;
+    display: flex;
+    justify-content: center;
+    background: var(--classic-green-bg);
 }
 
 button {
@@ -87,8 +90,8 @@ button:active {
 
 
 body {
-    background: var(--light-pink-bg);
     height: 100vh;
+    max-width: 1200px;
     margin: 0;
 }
 
@@ -108,9 +111,9 @@ body {
     width: 100vw;
 }
 
-@media screen and (min-width:1000px) {
+@media screen and (min-width:1200px) {
     .game-container {
-        width: 90%;
+        width: 100%;
         margin: 0 auto;
         padding: 0 55px;
     }
@@ -577,11 +580,11 @@ body {
     bottom: 10px;
     color: black;
     background-image: linear-gradient(to bottom, var(--light-pink-bg), transparent);
-    width: 50vw;
+    width: 50%;
+    max-width: 600px;
     height: 30vh;
     border-radius: 5vmin;
     text-align: center;
-    left: 25vw;
     opacity: 0;
     transition: opacity 0.3s ease-in-out;
 }
