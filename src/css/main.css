@@ -744,3 +744,8 @@ body {
     color: var(--scored-game-color);
     font-size: 1.5em;
 }
+
+.unscored-game{
+    color: var(--electric-blue-color);
+    font-size: 1.5em;
+}
