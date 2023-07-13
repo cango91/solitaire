@@ -257,7 +257,7 @@ export default class Menu {
         this.hideNewGameButton();
         this.scoreElement.innerText = "0";
         this.gameSettings.scoring ? this.showScoreBoard() : this.hideScoreboard();
-        const msg = `Draw-${this.gameSettings.difficulty},${this.gameSettings.thoughtfulSol ? 'unlimited undos' : 'no undos'}, ${this.gameSettings.passes > 0 ? this.gameSettings.passes : 'unlimited'}-passes through stock${this.gameSettings.scoring ? '<div class="scored-game">\nSCORED GAME</div>' : '<div class="unscored-game">UN-SCORED GAME</div><div style="padding-top:5px;">(to enable scoring, got to game settings, disable "thoughtful mode" and enable "scoring")</div>'}`;
+        const msg = `Draw-${this.gameSettings.difficulty},${this.gameSettings.thoughtfulSol ? 'unlimited undos' : 'no undos'}, ${this.gameSettings.passes > 0 ? this.gameSettings.passes : 'unlimited'}-passes through stock${this.gameSettings.scoring ? '<div class="scored-game">\nSCORED GAME</div>' : '<div class="unscored-game">UN-SCORED GAME</div><div style="padding-top:5px;">(to enable scoring, go to game settings, disable "thoughtful mode" and enable "scoring")</div>'}`;
         this.showPreGameMessage(msg);
     }
 
