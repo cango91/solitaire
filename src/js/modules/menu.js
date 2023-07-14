@@ -52,6 +52,7 @@ export default class Menu {
             music_volume: 0,
         };
         this.tempSettings = {};
+        
 
         // DOM references
         this.overlayEl = document.querySelector('.overlay');
@@ -103,18 +104,25 @@ export default class Menu {
         this.onHistoryUpdate = this.onHistoryUpdate.bind(this);
         this.onAboutClicked = this.onAboutClicked.bind(this);
         this.onUpdateScore = this.onUpdateScore.bind(this);
+        this.updateGamesPlayed = this.updateGamesPlayed.bind(this);
+        this.updateGamesFinished = this.updateGamesFinished.bind(this);
+        this.resetStats = this.resetStats.bind(this);
+        this.saveStatsLocal = this.saveStatsLocal.bind(this);
+        this.loadLocalStats = this.loadLocalStats.bind(this);
 
         // custom event listeners
         eventSystem.listen('game-initialized', this.onGameInitialized);
         eventSystem.listen('settings-clicked', this.onSettingsClicked);
         eventSystem.listen('dealing-finished', this.showNewGameButton);
+        eventSystem.listen('dealing-finished', this.updateGamesPlayed);
         eventSystem.listen('dealing', this.hidePreGameMessage);
         eventSystem.listen('game-ended', this.showGameEndedMsg);
+        eventSystem.listen('game-ended', this.updateGamesFinished);
         eventSystem.listen('game-load-finished', this.onGameLoaded);
         eventSystem.listen('fast-forward-possible', this.onFastForwardAvailable);
         eventSystem.listen('history-update', this.onHistoryUpdate);
         eventSystem.listen('about-clicked', this.onAboutClicked);
-        eventSystem.listen('score-updated',this.onUpdateScore);
+        eventSystem.listen('score-updated', this.onUpdateScore);
 
         // delegating click events for pop-ups
         this.overlayEl.addEventListener('click', (evt) => {
@@ -129,6 +137,10 @@ export default class Menu {
             }
         });
         this.btnNewGame.addEventListener('click', this.newGame);
+
+        // beta feature for a friend
+        this.localStats = {};
+        this.resetStats();
 
         // try to autoplay (or not) based on current user settings
         this.handleAudioRendering();
@@ -170,9 +182,9 @@ export default class Menu {
         this.hideElement(this.pregameMsg);
     }
 
-    makeVictoryMessage(score){
+    makeVictoryMessage(score) {
         let victoryMsg = this.victoryMsgInner;
-        if(this.currentSettings.game.scoring){
+        if (this.currentSettings.game.scoring) {
             victoryMsg += `\n<h3 class="winner-score">Your score: ${score}</h3>`;
         }
         return victoryMsg;
@@ -238,14 +250,14 @@ export default class Menu {
     _animateScoreUpdate(newScore) {
         const previousScore = Number(this.scoreElement.innerText);
         this.scoreElement.innerText = newScore;
-        if (previousScore > Number(newScore)){
+        if (previousScore > Number(newScore)) {
             this.scoreElement.classList.add('pulse-it', 'score-decreased');
-        }else if(previousScore < Number(newScore)){
-            this.scoreElement.classList.add('pulse-it','score-increased');
-        }else{
+        } else if (previousScore < Number(newScore)) {
+            this.scoreElement.classList.add('pulse-it', 'score-increased');
+        } else {
             return;
         }
-        setTimeout(()=> this.scoreElement.classList.remove('pulse-it', 'score-increased','score-decreased') , 500);
+        setTimeout(() => this.scoreElement.classList.remove('pulse-it', 'score-increased', 'score-decreased'), 500);
     }
 
 
@@ -629,6 +641,32 @@ export default class Menu {
         }
     }
 
+    get _localStats() {
+        try {
+            const localStats = JSON.parse(localStorage.getItem('localStats'));
+            if(localStats) 
+                return localStats;
+            else
+                throw new Error('Local Store item not found');
+        } catch (e) {
+            console.warn(`Couln't load local store:\n`, e);
+            throw e;
+        }
+    }
+
+    get userStats(){
+        return {
+            ...this.localStats,
+            "Scored Win Rate": `${(this.localStats.scoredGamesWon/this.localStats.scoredGamesStarted * 100).toFixed(2)}%`,
+            "Unscored Win Rate": `${(this.localStats.unscoredGamesWon/this.localStats.unscoredGamesStarted * 100).toFixed(2)}%`,
+            "Total Win Rate": `${((this.localStats.scoredGamesWon + this.localStats.unscoredGamesWon)/(this.localStats.unscoredGamesStarted + this.localStats.scoredGamesStarted)*100).toFixed(2)}%`,
+            "Average Score Per Scored Games Started": `${Math.round(this.localStats.totalScore/this.localStats.scoredGamesStarted)}`,
+            "Average Score Per Scored Games Won": `${Math.round(this.localStats.totalScore/this.localStats.scoredGamesWon)}`,
+            "Total Games Played": this.localStats.unscoredGamesStarted + this.localStats.scoredGamesStarted,
+            "Total Games Won": this.localStats.scoredGamesWon + this.localStats.unscoredGamesWon,
+        }
+    }
+
     // use this to get a valid setting, will return defaults or current if fails to load localStorage
     loadLocalSettings() {
         try {
@@ -642,6 +680,16 @@ export default class Menu {
         }
     }
 
+    loadLocalStats(){
+        try{
+            const localStats = this._localStats;
+            this.localStats = localStats;
+        }catch(e){
+            console.warn(`Resetting local stats`);
+            this.resetStats();
+        }
+    }
+
     // saving settings to localStorage
     saveSettingsLocal() {
         try {
@@ -649,5 +697,48 @@ export default class Menu {
         } catch (e) {
             console.error('Failed to save settings.', e);
         }
+    }
+
+    saveStatsLocal(){
+        try {
+            localStorage.setItem('localStats', JSON.stringify(this.localStats));
+        } catch (e) {
+            console.error('Failed to save stats.', e);
+        }
+    }
+
+    updateGamesPlayed() {
+        this.loadLocalStats();
+        if (this.currentSettings.game.scoring) {
+            this.localStats.scoredGamesStarted++;
+        } else {
+            this.localStats.unscoredGamesStarted++;
+        }
+        this.saveStatsLocal();
+    }
+
+    updateGamesFinished({ victoryStatus, score }) {
+        this.loadLocalStats();
+        if (this.currentSettings.game.scoring) {
+            if (victoryStatus) {
+                this.localStats.scoredGamesWon++;
+                this.localStats.totalScore += score;
+            }
+        } else {
+            if (victoryStatus) {
+                this.localStats.unscoredGamesWon++;
+            }
+        }
+        this.saveStatsLocal();
+    }
+
+    resetStats() {
+        this.localStats = {
+            scoredGamesStarted: 0,
+            unscoredGamesStarted: 0,
+            scoredGamesWon: 0,
+            unscoredGamesWon: 0,
+            totalScore: 0,
+        };
     }
 }

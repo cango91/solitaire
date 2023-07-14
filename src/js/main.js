@@ -188,4 +188,13 @@ window.getSortedEventHistory = (descending=true) => {
     //then outer
     entries.sort((a,b)=> descending ? b[1][0].time - a[1][0].time : a[1][0].time-b[1][0].time);
     return entries;
-}
+};
+Object.defineProperty(window, 'userStats', {
+    get: function() {
+      return menu.userStats;
+    }
+  });
+window.resetStats = () =>{
+    menu.resetStats();
+    menu.saveStatsLocal();
+} 
