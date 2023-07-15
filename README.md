@@ -36,7 +36,7 @@ There are many variations of dealing from the stock to *waste* pile. In this imp
 - CardStarter CSS Library
 
 # Getting Started
-[Click to Play!](./src/index.html)
+[Click to Play!](https://cango91.github.io/solitaire/src/index.html)
 
 [Click to view wireframe and initial pesudo-code](./docs/readme.md)
 
