@@ -51,7 +51,7 @@ There are many variations of dealing from the stock to *waste* pile. In this imp
 + Game Options: Sound effects
 + Game Options: Timer-mode
 + ~~Game Options: (Microsoft® style) scoring system~~
-+ Implement workaround for Firefox drag bug (see [this issue](https://bugzilla.mozilla.org/show_bug.cgi?id=505521))
++ ~~Implement workaround for Firefox drag bug (see [this issue](https://bugzilla.mozilla.org/show_bug.cgi?id=505521))~~
 
 # Contributing
 

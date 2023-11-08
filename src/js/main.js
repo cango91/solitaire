@@ -58,6 +58,9 @@ eventSystem.listen('dealing', () => {
 
 });
 
+// firefox drag fix
+var globalX, globalY;
+
 // drag controllers
 gameArea.addEventListener('dragstart', (evt) => {
     if (preventDragging) {
@@ -79,16 +82,30 @@ gameArea.addEventListener('dragstart', (evt) => {
 
     }
 });
-
+/** 
+ * Due to a bug (or feature since it's been alive for 15 years) in firefox (see issue: https://bugzilla.mozilla.org/show_bug.cgi?id=505521)
+ * Drag event clientX and clientY are always 0. So we set a globalX and Y on dragover on a sufficiently high up DOM element (in this case
+ * document) and use them during drag event for position update.
+ */
 gameArea.addEventListener('drag', (evt) => {
+    if(evt.clientX !==0 || evt.clientY !== 0)
     eventSystem.trigger('drag-update', {
         x: evt.clientX,
         y: evt.clientY
-    })
+    });
+    else
+    eventSystem.trigger('drag-update', {
+        x: globalX,
+        y: globalY
+    });
 });
 
 document.addEventListener('dragover', (evt) => {
     evt.preventDefault();
+    // firefox fix
+    globalX = evt.clientX;
+    globalY = evt.clientY;
+    // end firefox fix
     if (selfOrParentCheck(evt, ".foundation")
         || selfOrParentCheck(evt, ".tableau")
         || selfOrParentCheck(evt, '.on-tableau')
